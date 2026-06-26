@@ -12,9 +12,19 @@ import {
 import { AppendSceneAsync } from '@babylonjs/core/Loading/sceneLoader'
 import '@babylonjs/loaders/glTF'
 
+import type { ILoadingScreen } from '@babylonjs/core'
+
 export interface ViewerPanelProps {
   buffer: ArrayBuffer | null
   onCameraReady?: (camera: ArcRotateCamera | null) => void
+}
+
+// NoLoadingScreen è una implementazione vuota di ILoadingScreen per disabilitare il caricamento predefinito di BabylonJS.
+class NoLoadingScreen implements ILoadingScreen {
+  loadingUIBackgroundColor = ''
+  loadingUIText = ''
+  displayLoadingUI() {}
+  hideLoadingUI() {}
 }
 
 let ktxConfigured = false
@@ -50,6 +60,8 @@ export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
     ensureKtxTranscoder()
 
     const engine = new Engine(canvas, true, { antialias: true, stencil: true, adaptToDeviceRatio: true })
+
+    engine.loadingScreen = new NoLoadingScreen();
     engineRef.current = engine
 
     const scene = new Scene(engine)
