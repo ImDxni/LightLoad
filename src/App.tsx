@@ -33,6 +33,14 @@ export default function App() {
   const [options, setOptions] = useState<OptimizationOptions>(DEFAULT_OPTIONS)
   const [dropError, setDropError] = useState<string | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
+  const [stars, setStars] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/ImDxni/LightLoad')
+      .then(r => r.json())
+      .then(d => { if (typeof d.stargazers_count === 'number') setStars(d.stargazers_count) })
+      .catch(() => {})
+  }, [])
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
 
@@ -205,7 +213,7 @@ export default function App() {
         </div>
 
         <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
-          <span className="ll-github-stars">★ 0</span>
+          <span className="ll-github-stars">★ {stars ?? '—'}</span>
           <span>GitHub</span>
           <span className="ll-github-arrow">↗</span>
         </a>
