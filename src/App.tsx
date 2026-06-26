@@ -348,7 +348,7 @@ export default function App() {
 
                 <div className="ll-sidebar-foot">
                   <button className="ll-btn ll-btn--secondary" onClick={handleOptimize}
-                    disabled={!originalBuffer || view === 'processing'}>
+                    disabled={!originalBuffer || optState.phase === 'running'}>
                     <span className="ll-btn-icon">⟲</span> Ottimizza
                   </button>
                   <button className="ll-btn ll-btn--primary" onClick={handleDownload}
