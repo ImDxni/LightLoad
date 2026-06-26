@@ -1,39 +1,52 @@
 import { weld, dedup, prune, draco, simplify } from '@gltf-transform/functions'
-import type { Document } from '@gltf-transform/core'
+import type { Document, WebIO } from '@gltf-transform/core'
 import type { GeometryOptions } from '../types/pipeline'
 import { MeshoptSimplifier } from 'meshoptimizer'
 
 /**
- * Carica il modulo encoder Draco via importScripts (Web Worker only).
+ * Carica un modulo Draco (encoder o decoder) via fetch + new Function.
  *
- * draco_encoder_nodejs.js definisce DracoEncoderModule come var top-level.
- * In un worker, dopo importScripts, diventa self.DracoEncoderModule.
- * Il file viene caricato a runtime (non bundled da Vite), quindi i
- * require('fs')/require('path') interni (dentro if(isNode)) non vengono
- * mai chiamati perché isNode === false in browser.
+ * importScripts() NON è disponibile nei Web Worker ESM.
+ * new Function valuta il CJS fornendo module/exports fittizi:
+ *   - require('fs')/require('path') sono dentro if(isNode) che è false in browser
+ *   - module.exports = DracoEncoderModule/DracoDecoderModule viene catturato
  */
-async function loadDracoEncoder(): Promise<unknown> {
-  if (typeof (globalThis as Record<string, unknown>).DracoEncoderModule === 'undefined') {
-    // @ts-expect-error – importScripts disponibile solo nei worker
-    importScripts('/wasm/draco_encoder.js')
-  }
+async function loadDracoModule(jsPath: string): Promise<unknown> {
+  const res = await fetch(jsPath)
+  if (!res.ok) throw new Error(`${jsPath} non trovato (HTTP ${res.status})`)
+  const scriptText = await res.text()
 
-  const factory = (globalThis as Record<string, unknown>).DracoEncoderModule as (
-    opts: unknown,
-  ) => Promise<unknown>
+  const mod = { exports: {} as Record<string, unknown> }
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'exports', scriptText)(mod, mod.exports)
 
+  const factory = mod.exports as unknown as (opts: unknown) => unknown
   if (typeof factory !== 'function') {
-    throw new Error('DracoEncoderModule non trovato dopo importScripts draco_encoder.js')
+    throw new Error(`Factory non trovato in ${jsPath}`)
   }
 
-  return factory({
-    locateFile: (filename: string) => `/wasm/${filename}`,
-  })
+  // Può essere sincrono (ritorna il modulo direttamente) o asincrono (Promise)
+  const result = factory({ locateFile: (f: string) => `/wasm/${f}` })
+  return result instanceof Promise ? await result : result
+}
+
+let encoderCache: unknown = null
+let decoderCache: unknown = null
+
+export async function loadDracoEncoder(): Promise<unknown> {
+  if (!encoderCache) encoderCache = await loadDracoModule('/wasm/draco_encoder.js')
+  return encoderCache
+}
+
+export async function loadDracoDecoder(): Promise<unknown> {
+  if (!decoderCache) decoderCache = await loadDracoModule('/wasm/draco_decoder.js')
+  return decoderCache
 }
 
 export async function applyGeometryOps(
   doc: Document,
   options: GeometryOptions,
+  io: WebIO,
   onProgress: (msg: string) => void,
 ): Promise<void> {
   const transforms = []
@@ -67,7 +80,13 @@ export async function applyGeometryOps(
 
   if (options.draco) {
     onProgress('Draco: caricamento encoder e compressione geometria…')
+
+    // Il compressore Draco va registrato sull'IO, NON passato a draco().
+    // La compressione avviene internamente durante io.writeBinary().
     const encoder = await loadDracoEncoder()
-    await doc.transform(draco({ encoder }))
+    io.registerDependencies({ 'draco3d.encoder': encoder })
+
+    // draco() non prende encoder come opzione — solo metodo e quantizzazione
+    await doc.transform(draco())
   }
 }

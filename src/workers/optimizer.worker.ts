@@ -1,20 +1,8 @@
-/**
- * Web Worker: pipeline completa di ottimizzazione GLB.
- * Eseguito in un thread separato per non bloccare la UI.
- *
- * Flusso:
- *  1. Leggi il GLB in un Document gltf-transform
- *  2. Operazioni geometria (weld, dedup, prune, draco)
- *  3. Compressione texture KTX2 via libktx.wasm (KhronosGroup)
- *  4. Scrivi il GLB ottimizzato
- *  5. Rispondi con buffer + metriche
- */
-
 import { WebIO, type Document } from '@gltf-transform/core'
 import { ALL_EXTENSIONS, KHRTextureBasisu } from '@gltf-transform/extensions'
 import type { WorkerRequest, WorkerResponse, OptimizationOptions } from '../types/pipeline'
 import { extractMetrics, findNonPow4Textures } from '../lib/metricsExtractor'
-import { applyGeometryOps } from '../lib/geometryOps'
+import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
 
 function send(msg: WorkerResponse) { postMessage(msg) }
@@ -24,15 +12,10 @@ function warn(message: string) { send({ type: 'warning', message }) }
 // -------------------------------------------------------------------
 // Compressione texture KTX2
 // -------------------------------------------------------------------
-async function compressTextures(
-  doc: Document,
-  options: OptimizationOptions,
-): Promise<void> {
+async function compressTextures(doc: Document, options: OptimizationOptions): Promise<void> {
   if (!options.texture.enabled) return
 
   progress('Texture: caricamento libktx.wasm…', 58)
-
-  // Tenta di caricare il modulo; se manca, avvisa e salta senza bloccare
   try {
     await loadKtxModule()
   } catch (e: unknown) {
@@ -43,14 +26,10 @@ async function compressTextures(
   const textures = doc.getRoot().listTextures()
   if (textures.length === 0) return
 
-  // Avverte per texture non multiple di 4 (requisito KHR_texture_basisu)
   const metrics = extractMetrics(doc, 0)
   const badTextures = findNonPow4Textures(metrics.textures)
   if (badTextures.length > 0) {
-    warn(
-      `Le seguenti texture non sono multipli di 4 pixel e potrebbero causare ` +
-      `artefatti KTX2: ${badTextures.join(', ')}`,
-    )
+    warn(`Texture non multipli di 4 px (possibili artefatti KTX2): ${badTextures.join(', ')}`)
   }
 
   doc.createExtension(KHRTextureBasisu).setRequired(true)
@@ -59,14 +38,13 @@ async function compressTextures(
     const tex = textures[i]
     const name = tex.getName() || `texture_${i}`
     progress(
-      `Texture ${i + 1}/${textures.length}: encoding "${name}" (${options.texture.format.toUpperCase()})…`,
+      `Texture ${i + 1}/${textures.length}: "${name}" (${options.texture.format.toUpperCase()})…`,
       60 + Math.round((30 * i) / textures.length),
     )
 
     const image = tex.getImage()
     if (!image) continue
 
-    // Decodifica PNG/JPEG in RGBA8 via OffscreenCanvas
     let imageData: ImageData
     try {
       const blob = new Blob([image], { type: tex.getMimeType() })
@@ -81,14 +59,9 @@ async function compressTextures(
       continue
     }
 
-    // Codifica in KTX2 con Basis Universal
     let ktx2Data: Uint8Array
     try {
-      ktx2Data = await encodeTextureToKTX2(
-        imageData,
-        options.texture.format,
-        options.texture.quality,
-      )
+      ktx2Data = await encodeTextureToKTX2(imageData, options.texture.format, options.texture.quality)
     } catch (e) {
       warn(`Texture "${name}": encoding KTX2 fallito, saltata (${e})`)
       continue
@@ -99,7 +72,7 @@ async function compressTextures(
 }
 
 // -------------------------------------------------------------------
-// Entry point del worker
+// Entry point
 // -------------------------------------------------------------------
 self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   if (ev.data.type !== 'optimize') return
@@ -107,10 +80,21 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   const { buffer, options } = ev.data
 
   try {
-    progress('Parsing GLB…', 5)
+    progress('Inizializzazione…', 3)
 
+    // Crea il WebIO e registra tutte le estensioni
     const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 
+    // Registra il decoder Draco per leggere GLB già compressi con Draco
+    // (non blocca: se il file non è Draco il decoder non viene usato)
+    try {
+      const decoder = await loadDracoDecoder()
+      io.registerDependencies({ 'draco3d.decoder': decoder })
+    } catch {
+      // Decoder non disponibile — fallisce solo su GLB già Draco-compressi
+    }
+
+    progress('Parsing GLB…', 8)
     let doc: Document
     try {
       doc = await io.readBinary(new Uint8Array(buffer))
@@ -119,12 +103,13 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
       return
     }
 
-    progress('Geometria: applicazione operazioni…', 15)
-    await applyGeometryOps(doc, options.geometry, (msg) => progress(msg, 40))
+    progress('Geometria…', 15)
+    // Passa io ad applyGeometryOps — registra l'encoder Draco sull'IO se necessario
+    await applyGeometryOps(doc, options.geometry, io, (msg) => progress(msg, 40))
 
     await compressTextures(doc, options)
 
-    progress('Scrittura GLB ottimizzato…', 92)
+    progress('Scrittura GLB…', 92)
     const outBuffer = await io.writeBinary(doc)
     const afterMetrics = extractMetrics(doc, outBuffer.byteLength)
 

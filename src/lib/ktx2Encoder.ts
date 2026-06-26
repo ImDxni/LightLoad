@@ -1,20 +1,16 @@
 /**
  * Wrapper per libktx.wasm di KhronosGroup KTX-Software v4.4.2.
  *
- * libktx implementa internamente Basis Universal (ETC1S e UASTC)
- * e produce file KTX2 validi per KHR_texture_basisu.
- *
- * File necessari in /wasm/:  libktx.js  e  libktx.wasm
- * Ottenuti da:
- *   https://github.com/KhronosGroup/KTX-Software/releases/tag/v4.4.2
- *   (KTX-Software-4.4.2-Web-libktx.zip)
+ * Note sul binding Embind di libktx:
+ *  - Le enum (VkFormat, TextureCreateStorageEnum) sono oggetti {value:N}, non interi
+ *  - Il setter textureCreateInfo.vkFormat accetta solo l'oggetto enum, non un intero
+ *  - I metodi dell'istanza texture: setImageFromMemory, compressBasis, writeToMemory
+ *  - basisParams: struct Embind con campi uastc, qualityLevel, threadCount, compressionLevel
  */
 
-// VK_FORMAT_R8G8B8A8_UNORM = 37  (formato sorgente RGBA8)
-const VK_FORMAT_R8G8B8A8_UNORM = 37
-
-interface KtxCreateInfo {
-  vkFormat: number
+interface KtxCreateInfoInstance {
+  glInternalformat: number
+  vkFormat: unknown          // vuole l'oggetto enum Embind, non un intero
   baseWidth: number
   baseHeight: number
   baseDepth: number
@@ -24,87 +20,76 @@ interface KtxCreateInfo {
   numFaces: number
   isArray: boolean
   generateMipmaps: boolean
+  [key: string]: unknown
 }
 
-interface KtxBasisParams {
+interface KtxBasisParamsInstance {
   uastc: boolean
-  qualityLevel: number        // ETC1S: 1–255
-  uastcFlags?: number         // UASTC quality flags (default 0 = standard)
+  qualityLevel: number
+  uastcFlags: number
   threadCount: number
-  compressionLevel: number    // 0–5
-  normalMap?: boolean
-  maxEndpoints?: number
-  maxSelectors?: number
-  noEndpointRDO?: boolean
-  noSelectorRDO?: boolean
+  compressionLevel: number
+  normalMap: boolean
+  [key: string]: unknown
 }
 
-interface KtxTexture {
-  setImageFromMemory(level: number, layer: number, faceSlice: number, data: Uint8Array): number
-  compressBasisEx(params: KtxBasisParams): number
+interface KtxTextureInstance {
+  setImageFromMemory(level: number, layer: number, faceSlice: number, data: Uint8Array): unknown
+  compressBasis(params: KtxBasisParamsInstance): unknown
   writeToMemory(): Uint8Array
   delete(): void
 }
 
-interface KtxTextureConstructor {
-  new (createInfo: KtxCreateInfo): KtxTexture
-}
-
 interface KtxModule {
-  ktxTexture: KtxTextureConstructor
-  ErrorCode: Record<string, number>
+  texture: new (createInfo: KtxCreateInfoInstance, storage: unknown) => KtxTextureInstance
+  textureCreateInfo: new () => KtxCreateInfoInstance
+  basisParams: new () => KtxBasisParamsInstance
+  TextureCreateStorageEnum: Record<string, unknown>
+  VkFormat: Record<string, unknown>
+  [key: string]: unknown
 }
 
-// Dichiarazione del factory globale iniettato da libktx.js
-declare global {
-  const createKtxModule: (config?: {
-    locateFile?: (filename: string) => string
-  }) => Promise<KtxModule>
-}
+type KtxFactory = (config?: { locateFile?: (filename: string) => string }) => Promise<KtxModule>
 
 let cachedModule: KtxModule | null = null
 
-/**
- * Carica libktx.wasm (una sola volta, poi usa la cache).
- * Richiede che /wasm/libktx.js e /wasm/libktx.wasm siano serviti
- * dalla root del progetto.
- */
+/** Estrae il valore numerico da un enum Embind {value:N} o da un numero diretto */
+function enumNum(v: unknown, fallback = 0): number {
+  if (typeof v === 'number') return v
+  if (v !== null && typeof v === 'object' && 'value' in (v as object)) {
+    return Number((v as Record<string, unknown>).value)
+  }
+  return fallback
+}
+
+/** Controlla se il risultato Embind è successo (void, 0, o enum {value:0}) */
+function isKtxSuccess(result: unknown): boolean {
+  if (result === undefined || result === null) return true
+  if (result === 0) return true
+  if (typeof result === 'object') {
+    const val = (result as Record<string, unknown>).value
+    return val === 0 || val === undefined
+  }
+  return false
+}
+
 export async function loadKtxModule(): Promise<KtxModule> {
   if (cachedModule) return cachedModule
 
-  // In Web Worker si usa importScripts (sincrono) per caricare il glue JS
-  try {
-    // @ts-expect-error – importScripts è disponibile solo nei worker
-    importScripts('/wasm/libktx.js')
-  } catch (e) {
-    throw new Error(
-      'libktx.js non trovato in /wasm/. ' +
-      'Esegui "npm run setup:wasm" — il file viene scaricato automaticamente.',
-    )
-  }
+  const res = await fetch('/wasm/libktx.js')
+  if (!res.ok) throw new Error('libktx.js non trovato in /wasm/. Esegui "npm run setup:wasm".')
 
-  const factory = (
-    globalThis as unknown as { createKtxModule: typeof createKtxModule }
-  ).createKtxModule
+  const mod = { exports: {} as Record<string, unknown> }
+  // eslint-disable-next-line no-new-func
+  new Function('module', 'exports', await res.text())(mod, mod.exports)
 
-  if (typeof factory !== 'function') {
-    throw new Error('createKtxModule non trovato dopo aver caricato libktx.js')
-  }
+  const factory = mod.exports as unknown as KtxFactory
+  if (typeof factory !== 'function') throw new Error('createKtxModule non trovato in libktx.js')
 
-  cachedModule = await factory({
-    locateFile: (filename: string) => `/wasm/${filename}`,
-  })
-
+  cachedModule = await factory({ locateFile: (f) => `/wasm/${f}` })
   return cachedModule
 }
 
-/**
- * Codifica un'immagine RGBA8 in un file KTX2 con compressione Basis Universal.
- *
- * @param imageData  Pixel RGBA8 (da OffscreenCanvas.getImageData o simile)
- * @param format     'etc1s' → massima compressione, 'uastc' → massima qualità
- * @param quality    0–255 (Basis ETC1S quality level; ignorato per UASTC)
- */
 export async function encodeTextureToKTX2(
   imageData: { data: Uint8ClampedArray | Uint8Array; width: number; height: number },
   format: 'etc1s' | 'uastc',
@@ -112,67 +97,51 @@ export async function encodeTextureToKTX2(
 ): Promise<Uint8Array> {
   const ktx = await loadKtxModule()
 
-  const createInfo: KtxCreateInfo = {
-    vkFormat: VK_FORMAT_R8G8B8A8_UNORM,
-    baseWidth: imageData.width,
-    baseHeight: imageData.height,
-    baseDepth: 1,
-    numDimensions: 2,
-    numLevels: 1,
-    numLayers: 1,
-    numFaces: 1,
-    isArray: false,
-    generateMipmaps: false,
-  }
+  // Gli enum Embind sono oggetti {value:N} — il costruttore li vuole come tali
+  const storageEnum = ktx.TextureCreateStorageEnum as Record<string, unknown>
+  const storageEnumObj = storageEnum.ALLOC_STORAGE ?? storageEnum.alloc
 
-  const texture = new ktx.ktxTexture(createInfo)
+  const vkEnum = ktx.VkFormat as Record<string, unknown>
+  const vkFormatEnumObj = vkEnum.VK_FORMAT_R8G8B8A8_UNORM ?? vkEnum.R8G8B8A8_UNORM
+
+  // Crea il textureCreateInfo via Embind struct
+  // I campi enum (vkFormat) vogliono l'oggetto enum, non un intero
+  const ci = new ktx.textureCreateInfo() as KtxCreateInfoInstance
+  ci.glInternalformat = 0
+  ;(ci as Record<string, unknown>).vkFormat = vkFormatEnumObj
+  ci.baseWidth = imageData.width
+  ci.baseHeight = imageData.height
+  ci.baseDepth = 1
+  ci.numDimensions = 2
+  ci.numLevels = 1
+  ci.numLayers = 1
+  ci.numFaces = 1
+  ci.isArray = false
+  ci.generateMipmaps = false
+
+  const texture = new ktx.texture(ci, storageEnumObj)
 
   try {
-    // Carica i pixel RGBA nel texture object
     const rgba = new Uint8Array(imageData.data.buffer)
     const setResult = texture.setImageFromMemory(0, 0, 0, rgba)
-    if (setResult !== 0) {
-      throw new Error(`setImageFromMemory fallito con codice ${setResult}`)
-    }
+    if (!isKtxSuccess(setResult)) throw new Error(`setImageFromMemory: ${enumNum(setResult, -1)}`)
 
-    // Comprime con Basis Universal
-    const params: KtxBasisParams = {
-      uastc: format === 'uastc',
-      qualityLevel: Math.max(1, Math.min(255, quality)),
-      threadCount: 1,           // i Worker non supportano thread multipli
-      compressionLevel: 2,      // equilibrio velocità/qualità (range 0–5)
-    }
-    if (format === 'uastc') {
-      // UASTC flags: 0 = default quality, 4 = fastest, 2 = slower/better
-      params.uastcFlags = 2
-    }
+    const params = new ktx.basisParams()
+    params.uastc = format === 'uastc'
+    params.qualityLevel = Math.max(1, Math.min(255, quality))
+    params.threadCount = 1
+    params.compressionLevel = 2
+    params.normalMap = false
+    if (format === 'uastc') params.uastcFlags = 2
 
-    const compressResult = texture.compressBasisEx(params)
-    if (compressResult !== 0) {
-      throw new Error(`compressBasisEx fallito con codice ${compressResult}`)
-    }
+    const compResult = texture.compressBasis(params)
+    if (!isKtxSuccess(compResult)) throw new Error(`compressBasis: ${enumNum(compResult, -1)}`)
 
-    // Ottieni il file KTX2 come Uint8Array
     const result = texture.writeToMemory()
-    if (!result || result.byteLength === 0) {
-      throw new Error('writeToMemory ha restituito un buffer vuoto')
-    }
+    if (!result || result.byteLength === 0) throw new Error('writeToMemory vuoto')
 
-    // Copia il risultato prima di chiamare delete() (il buffer WASM viene liberato)
     return result.slice(0)
   } finally {
     texture.delete()
-  }
-}
-
-/**
- * Verifica (senza bloccare) se libktx.js è presente in /wasm/.
- */
-export async function checkKtxAvailable(): Promise<boolean> {
-  try {
-    const res = await fetch('/wasm/libktx.js', { method: 'HEAD' })
-    return res.ok
-  } catch {
-    return false
   }
 }

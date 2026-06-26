@@ -289,7 +289,7 @@ export default function App() {
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size">{beforeSize}</span>
-                      <span className="ll-viewer-badge ll-viewer-badge--neutral">non ottimizzato</span>
+                      <span className="ll-viewer-badge ll-viewer-badge--neutral">Non ottimizzato</span>
                     </div>
                   </div>
 

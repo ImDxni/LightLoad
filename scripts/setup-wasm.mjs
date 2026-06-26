@@ -25,9 +25,12 @@ function copy(src, dest) {
 const babylonAssets = resolve(dirname(require.resolve('@babylonjs/core')), '..', 'assets')
 copy(resolve(babylonAssets, 'Basis', 'basis_transcoder.js'),   resolve(outDir, 'basis_transcoder.js'))
 copy(resolve(babylonAssets, 'Basis', 'basis_transcoder.wasm'), resolve(outDir, 'basis_transcoder.wasm'))
+// babylon.ktx2Decoder.js e msc_basis_transcoder.{js,wasm} vengono scaricati automaticamente
+// dalla sezione CDN più sotto nello script.
 
 const dracoDir = dirname(require.resolve('draco3d'))
-copy(resolve(dracoDir, 'draco_encoder_nodejs.js'), resolve(outDir, 'draco_encoder.js'))  // glue JS (browser-compatible)
+copy(resolve(dracoDir, 'draco_encoder_nodejs.js'), resolve(outDir, 'draco_encoder.js'))  // encoder glue JS
+copy(resolve(dracoDir, 'draco_decoder_nodejs.js'), resolve(outDir, 'draco_decoder.js'))  // decoder glue JS
 copy(resolve(dracoDir, 'draco_encoder.wasm'),      resolve(outDir, 'draco_encoder.wasm'))
 copy(resolve(dracoDir, 'draco_decoder.wasm'),      resolve(outDir, 'draco_decoder.wasm'))
 

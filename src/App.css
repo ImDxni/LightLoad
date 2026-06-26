@@ -416,9 +416,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #3a3a44;
-  font-size: 13px;
+  color: #5a5a64;
+  font-size: 12px;
   pointer-events: none;
+  z-index: 5;         /* sopra il canvas Babylon.js */
+  user-select: none;
 }
 .ll-viewer-footer {
   height: 64px;
