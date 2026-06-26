@@ -1,0 +1,120 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Toggle switch */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.4rem;
+  user-select: none;
+}
+
+.toggle input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: relative;
+  display: inline-block;
+  width: 34px;
+  height: 18px;
+  background: #333;
+  border-radius: 9px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggleSlider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #888;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .toggleSlider {
+  background: #7c6aff;
+}
+
+.toggle input:checked + .toggleSlider::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Radio group */
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0.6rem 0.2rem;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.hint {
+  color: #666;
+  font-size: 0.78rem;
+}
+
+/* Slider qualità */
+.sliderGroup {
+  margin-top: 0.4rem;
+}
+
+.sliderLabel {
+  font-size: 0.85rem;
+  color: #aaa;
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.slider {
+  width: 100%;
+  accent-color: #7c6aff;
+}
+
+.sliderTicks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #555;
+  margin-top: 2px;
+}
