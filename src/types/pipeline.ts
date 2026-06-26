@@ -3,6 +3,9 @@ export interface GeometryOptions {
   dedup: boolean
   prune: boolean
   draco: boolean
+  simplify: boolean,
+  simplifyRatio: number,
+  simplifyError: number,
 }
 
 export interface TextureOptions {

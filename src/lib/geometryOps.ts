@@ -1,6 +1,7 @@
-import { weld, dedup, prune, draco } from '@gltf-transform/functions'
+import { weld, dedup, prune, draco, simplify } from '@gltf-transform/functions'
 import type { Document } from '@gltf-transform/core'
 import type { GeometryOptions } from '../types/pipeline'
+import { MeshoptSimplifier } from 'meshoptimizer'
 
 /**
  * Carica il modulo encoder Draco via importScripts (Web Worker only).
@@ -48,6 +49,16 @@ export async function applyGeometryOps(
   if (options.prune) {
     onProgress('Prune: eliminazione nodi/materiali inutilizzati…')
     transforms.push(prune())
+  }
+
+  if (options.simplify) {
+    onProgress('Simplify: semplificazione geometria…')
+    await MeshoptSimplifier.ready
+    transforms.push(simplify({
+      simplifier: MeshoptSimplifier,
+      ratio: options.simplifyRatio,
+      error: options.simplifyError,
+    }))
   }
 
   if (transforms.length > 0) {

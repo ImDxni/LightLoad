@@ -403,6 +403,7 @@ body {
   flex: 1;
   min-height: 0;
   position: relative;
+  overflow: hidden;
 }
 .ll-viewer-canvas-wrap canvas {
   display: block;

@@ -1,17 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
+import type { ArcRotateCamera } from '@babylonjs/core'
 import { useOptimizer } from './hooks/useOptimizer'
 import { extractMetrics } from './lib/metricsExtractor'
 import type { OptimizationOptions, GLBMetrics } from './types/pipeline'
-import type { ViewerHandle } from './components/ViewerPanel'
 import { ViewerPanel } from './components/ViewerPanel'
 import { MetricsTable } from './components/MetricsTable'
 import { OptimizeControls } from './components/OptimizeControls'
 import './App.css'
 
 const DEFAULT_OPTIONS: OptimizationOptions = {
-  geometry: { weld: true, dedup: true, prune: true, draco: false },
+  geometry: { weld: true, dedup: true, prune: true, draco: false, simplify: false, simplifyRatio: 0.5, simplifyError: 0.01 },
   texture: { enabled: false, format: 'etc1s', quality: 80 },
 }
 
@@ -34,31 +34,51 @@ export default function App() {
   const [dropError, setDropError] = useState<string | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
 
-  const beforeRef = useRef<ViewerHandle>(null)
-  const afterRef = useRef<ViewerHandle>(null)
-  const syncingRef = useRef(false)
-  const obsARef = useRef<ReturnType<typeof attachSync> | null>(null)
-  const obsBRef = useRef<ReturnType<typeof attachSync> | null>(null)
-
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
 
-  // Camera sync helpers
-  function attachSync(
-    src: NonNullable<ViewerHandle['camera']>,
-    dst: NonNullable<ViewerHandle['camera']>,
-  ) {
+  // ── Camera sync ────────────────────────────────────────────────────
+  const syncingRef = useRef(false)
+  const beforeCamRef = useRef<ArcRotateCamera | null>(null)
+  const afterCamRef  = useRef<ArcRotateCamera | null>(null)
+  // Observer<Camera> perché onViewMatrixChangedObservable è Observable<Camera>
+  const obsARef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
+  const obsBRef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
+
+  function attachSync(src: ArcRotateCamera, dst: ArcRotateCamera) {
     return src.onViewMatrixChangedObservable.add(() => {
       if (syncingRef.current) return
       syncingRef.current = true
       dst.alpha = src.alpha
-      dst.beta = src.beta
+      dst.beta  = src.beta
       dst.radius = src.radius
       dst.target.copyFrom(src.target)
       syncingRef.current = false
     })
   }
 
-  // ── File loading ──────────────────────────────────────────────────
+  // Ricollega sync quando entrambe le camere sono disponibili
+  function connectCameras(a: ArcRotateCamera | null, b: ArcRotateCamera | null) {
+    if (obsARef.current && beforeCamRef.current) beforeCamRef.current.onViewMatrixChangedObservable.remove(obsARef.current)
+    if (obsBRef.current && afterCamRef.current)  afterCamRef.current.onViewMatrixChangedObservable.remove(obsBRef.current)
+    obsARef.current = null
+    obsBRef.current = null
+    if (a && b) {
+      obsARef.current = attachSync(a, b)
+      obsBRef.current = attachSync(b, a)
+    }
+  }
+
+  const handleBeforeCameraReady = useCallback((cam: ArcRotateCamera | null) => {
+    beforeCamRef.current = cam
+    connectCameras(cam, afterCamRef.current)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAfterCameraReady = useCallback((cam: ArcRotateCamera | null) => {
+    afterCamRef.current = cam
+    connectCameras(beforeCamRef.current, cam)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── File loading ────────────────────────────────────────────────────
   const loadFile = useCallback(async (buffer: ArrayBuffer, name: string) => {
     setDropError(null)
     resetOpt()
@@ -68,7 +88,6 @@ export default function App() {
     setOriginalBuffer(buffer)
     setView('result')
 
-    // Metriche originale sul thread principale
     try {
       const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
       const doc = await io.readBinary(new Uint8Array(buffer.slice(0)))
@@ -82,16 +101,13 @@ export default function App() {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.glb')) {
-      setDropError('Solo file .glb sono supportati.')
-      return
-    }
+    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError('Solo file .glb sono supportati.'); return }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const buf = ev.target?.result as ArrayBuffer
       if (!buf || buf.byteLength < 12) { setDropError('File non valido.'); return }
       const magic = new DataView(buf).getUint32(0, true)
-      if (magic !== 0x46546c67) { setDropError('Non è un GLB valido (header errato).'); return }
+      if (magic !== 0x46546c67) { setDropError('Non è un GLB valido.'); return }
       loadFile(buf, file.name)
     }
     reader.readAsArrayBuffer(file)
@@ -100,9 +116,7 @@ export default function App() {
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.glb')) {
-      setDropError('Solo file .glb sono supportati.'); return
-    }
+    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError('Solo file .glb sono supportati.'); return }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const buf = ev.target?.result as ArrayBuffer
@@ -113,7 +127,7 @@ export default function App() {
     reader.readAsArrayBuffer(file)
   }, [loadFile])
 
-  // ── Optimization ─────────────────────────────────────────────────
+  // ── Optimization ────────────────────────────────────────────────────
   const handleOptimize = useCallback(() => {
     if (!originalBuffer) return
     setView('processing')
@@ -131,28 +145,7 @@ export default function App() {
     }
   }, [optState])
 
-  // ── Load optimized model into viewer ─────────────────────────────
-  useEffect(() => {
-    if (originalBuffer && beforeRef.current) {
-      beforeRef.current.loadGlb(originalBuffer.slice(0))
-    }
-  }, [originalBuffer])
-
-  useEffect(() => {
-    if (!optimizedBuffer || !afterRef.current) return
-    afterRef.current.loadGlb(optimizedBuffer.slice(0)).then(() => {
-      const cb = beforeRef.current?.camera
-      const ca = afterRef.current?.camera
-      if (!cb || !ca) return
-      // Cleanup previous observers
-      if (obsARef.current) cb.onViewMatrixChangedObservable.remove(obsARef.current)
-      if (obsBRef.current) ca.onViewMatrixChangedObservable.remove(obsBRef.current)
-      obsARef.current = attachSync(cb, ca)
-      obsBRef.current = attachSync(ca, cb)
-    })
-  }, [optimizedBuffer])
-
-  // ── Download ─────────────────────────────────────────────────────
+  // ── Download ─────────────────────────────────────────────────────────
   const handleDownload = useCallback(() => {
     if (!optimizedBuffer || !filename) return
     const blob = new Blob([optimizedBuffer], { type: 'model/gltf-binary' })
@@ -164,7 +157,7 @@ export default function App() {
     URL.revokeObjectURL(url)
   }, [optimizedBuffer, filename])
 
-  // ── Reset ─────────────────────────────────────────────────────────
+  // ── Reset ─────────────────────────────────────────────────────────────
   const handleReset = useCallback(() => {
     resetOpt()
     setOriginalBuffer(null)
@@ -176,15 +169,12 @@ export default function App() {
     setFileInputKey(k => k + 1)
   }, [resetOpt])
 
-  // ── Derived values ────────────────────────────────────────────────
-  const progress = optState.phase === 'running' ? optState.percent : 0
-  const step = optState.phase === 'running' ? optState.message : ''
-  const warnings = optState.phase === 'done' ? optState.warnings : []
-  const hasOptimized = !!optimizedBuffer && !!afterMetrics
-
+  // ── Derived ───────────────────────────────────────────────────────────
+  const progress  = optState.phase === 'running' ? optState.percent : 0
+  const step      = optState.phase === 'running' ? optState.message : ''
+  const warnings  = optState.phase === 'done' ? optState.warnings : []
   const beforeSize = fmtSize(beforeMetrics?.fileSize ?? 0)
-  const afterSize = fmtSize(afterMetrics?.fileSize ?? 0)
-
+  const afterSize  = fmtSize(afterMetrics?.fileSize ?? 0)
   const savings = beforeMetrics && afterMetrics && afterMetrics.fileSize > 0
     ? Math.round((1 - afterMetrics.fileSize / beforeMetrics.fileSize) * 100)
     : null
@@ -204,7 +194,6 @@ export default function App() {
             <span className="ll-beta">BETA</span>
           </div>
 
-          {/* File chip — visible when a file is loaded */}
           {filename && view !== 'empty' && (
             <div className="ll-file-chip">
               <span className="ll-file-chip-dot" />
@@ -215,12 +204,7 @@ export default function App() {
           )}
         </div>
 
-        <a
-          href="https://github.com/ImDxni/LightLoad"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ll-github"
-        >
+        <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
           <span className="ll-github-stars">★ 0</span>
           <span>GitHub</span>
           <span className="ll-github-arrow">↗</span>
@@ -230,14 +214,10 @@ export default function App() {
       {/* ── MAIN ── */}
       <main className="ll-main">
 
-        {/* EMPTY state */}
+        {/* EMPTY */}
         {view === 'empty' && (
           <section className="ll-section">
-            <input
-              key={fileInputKey}
-              type="file"
-              accept=".glb"
-              id="glb-input"
+            <input key={fileInputKey} type="file" accept=".glb" id="glb-input"
               style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
               onChange={handleInputChange}
             />
@@ -264,7 +244,7 @@ export default function App() {
           </section>
         )}
 
-        {/* PROCESSING state */}
+        {/* PROCESSING */}
         {view === 'processing' && (
           <section className="ll-section">
             <div className="ll-proc-card">
@@ -287,14 +267,14 @@ export default function App() {
           </section>
         )}
 
-        {/* RESULT state */}
+        {/* RESULT */}
         {view === 'result' && (
           <section className="ll-section ll-section--result">
             <div className="ll-result-inner">
 
-              {/* Left: viewers + metrics */}
               <div className="ll-result-main">
                 <div className="ll-viewers-row">
+
                   <div className="ll-viewer-card">
                     <div className="ll-viewer-header">
                       <div className="ll-viewer-header-left">
@@ -305,7 +285,7 @@ export default function App() {
                     </div>
                     <div className="ll-viewer-canvas-wrap">
                       {!originalBuffer && <div className="ll-viewer-empty">Nessun modello</div>}
-                      <ViewerPanel ref={beforeRef} />
+                      <ViewerPanel buffer={originalBuffer} onCameraReady={handleBeforeCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size">{beforeSize}</span>
@@ -325,16 +305,17 @@ export default function App() {
                     </div>
                     <div className="ll-viewer-canvas-wrap">
                       {!optimizedBuffer && <div className="ll-viewer-empty">Da ottimizzare</div>}
-                      <ViewerPanel ref={afterRef} />
+                      <ViewerPanel buffer={optimizedBuffer} onCameraReady={handleAfterCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
-                      <span className="ll-viewer-size">{hasOptimized ? afterSize : '—'}</span>
+                      <span className="ll-viewer-size">{optimizedBuffer ? afterSize : '—'}</span>
                       {savings !== null && savings > 0
                         ? <span className="ll-viewer-badge ll-viewer-badge--good">↓ {savings}%</span>
                         : <span className="ll-viewer-badge ll-viewer-badge--neutral">—</span>
                       }
                     </div>
                   </div>
+
                 </div>
 
                 <div className="ll-sync-hint">
@@ -345,7 +326,6 @@ export default function App() {
                 <MetricsTable before={beforeMetrics} after={afterMetrics} />
               </div>
 
-              {/* Right: sidebar */}
               <aside className="ll-sidebar">
                 <div className="ll-sidebar-head">
                   <div className="ll-sidebar-head-title">Ottimizzazione</div>
@@ -353,40 +333,26 @@ export default function App() {
                 </div>
 
                 <div className="ll-sidebar-body">
-                  <OptimizeControls
-                    options={options}
-                    onChange={setOptions}
-                    disabled={view === 'processing'}
-                  />
+                  <OptimizeControls options={options} onChange={setOptions} disabled={optState.phase === 'running'} />
 
-                  {/* Error */}
                   {optState.phase === 'error' && (
                     <div className="ll-error">❌ {optState.message}</div>
                   )}
 
-                  {/* Warnings */}
                   {warnings.length > 0 && (
                     <div className="ll-warnings">
-                      {warnings.map((w, i) => (
-                        <div key={i} className="ll-warning-item">⚠ {w}</div>
-                      ))}
+                      {warnings.map((w, i) => <div key={i} className="ll-warning-item">⚠ {w}</div>)}
                     </div>
                   )}
                 </div>
 
                 <div className="ll-sidebar-foot">
-                  <button
-                    className="ll-btn ll-btn--secondary"
-                    onClick={handleOptimize}
-                    disabled={!originalBuffer || view === 'processing'}
-                  >
+                  <button className="ll-btn ll-btn--secondary" onClick={handleOptimize}
+                    disabled={!originalBuffer || view === 'processing'}>
                     <span className="ll-btn-icon">⟲</span> Ottimizza
                   </button>
-                  <button
-                    className="ll-btn ll-btn--primary"
-                    onClick={handleDownload}
-                    disabled={!optimizedBuffer}
-                  >
+                  <button className="ll-btn ll-btn--primary" onClick={handleDownload}
+                    disabled={!optimizedBuffer}>
                     <span>↓</span> Scarica GLB ottimizzato
                   </button>
                 </div>

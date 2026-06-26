@@ -1,8 +1,4 @@
-/**
- * Viewer 3D Babylon.js — solo il canvas, senza wrapper card.
- * Il card shell (header, footer) è gestito da App.tsx.
- */
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useRef } from 'react'
 import {
   Engine,
   Scene,
@@ -11,15 +7,20 @@ import {
   DirectionalLight,
   Vector3,
   Color4,
-  SceneLoader,
   KhronosTextureContainer2,
 } from '@babylonjs/core'
+import { AppendSceneAsync } from '@babylonjs/core/Loading/sceneLoader'
 import '@babylonjs/loaders/glTF'
 
-export interface ViewerHandle {
-  camera: ArcRotateCamera | null
-  scene: Scene | null
-  loadGlb: (buffer: ArrayBuffer) => Promise<void>
+/**
+ * Prop-based approach — evita tutti i problemi di timing con forwardRef/StrictMode:
+ * quando `buffer` cambia, il viewer ricarica il modello internamente.
+ */
+export interface ViewerPanelProps {
+  /** Buffer GLB da visualizzare. Null → scena vuota con sfondo scuro. */
+  buffer: ArrayBuffer | null
+  /** Callback chiamata non appena la camera è pronta o distrutta. */
+  onCameraReady?: (camera: ArcRotateCamera | null) => void
 }
 
 let ktxConfigured = false
@@ -27,85 +28,80 @@ function ensureKtxTranscoder() {
   if (ktxConfigured) return
   ktxConfigured = true
   KhronosTextureContainer2.URLConfig = {
-    jsDecoderModule: '/wasm/basis_transcoder.js',
-    wasmFallback: '/wasm/basis_transcoder.wasm',
+    jsDecoderModule: '/wasm/babylon.ktx2Decoder.js',
+    jsMSCTranscoder: '/wasm/basis_transcoder.js',
+    wasmMSCTranscoder: '/wasm/basis_transcoder.wasm',
+    wasmUASTCToASTC: null,
+    wasmUASTCToBC7: null,
+    wasmUASTCToRGBA_UNORM: null,
+    wasmUASTCToRGBA_SRGB: null,
+    wasmUASTCToR8_UNORM: null,
+    wasmUASTCToRG8_UNORM: null,
+    wasmZSTDDecoder: null,
   }
 }
 
-export const ViewerPanel = forwardRef<ViewerHandle>((_props, ref) => {
+export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<Engine | null>(null)
   const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<ArcRotateCamera | null>(null)
 
-  useImperativeHandle(ref, () => ({
-    get camera() { return cameraRef.current },
-    get scene() { return sceneRef.current },
-    loadGlb: async (buffer: ArrayBuffer) => {
-      if (!sceneRef.current) return
-      // Rimuove mesh/materiali precedenti
-      sceneRef.current.meshes.slice().forEach(m => m.dispose())
-      sceneRef.current.materials.slice().forEach(m => m.dispose())
-      sceneRef.current.textures.slice().forEach(t => t.dispose())
-
-      const blob = new Blob([buffer], { type: 'model/gltf-binary' })
-      const url = URL.createObjectURL(blob)
-      try {
-        await SceneLoader.AppendAsync(url, '', sceneRef.current, undefined, '.glb')
-      } finally {
-        URL.revokeObjectURL(url)
-      }
-
-      // Reimposta camera sul bounding box del modello
-      const cam = cameraRef.current
-      if (cam && sceneRef.current) {
-        const { min, max } = sceneRef.current.getWorldExtends(m => m.isVisible && m.isEnabled())
-        const center = Vector3.Center(min, max)
-        const size = max.subtract(min).length()
-        cam.target = center
-        cam.radius = size * 1.2
-        cam.alpha = Math.PI / 4
-        cam.beta = Math.PI / 3
-      }
-    },
-  }))
-
+  // ── Init engine (una volta sola) ────────────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
     ensureKtxTranscoder()
 
-    const engine = new Engine(canvas, true, { antialias: true, stencil: true })
+    const engine = new Engine(canvas, true, {
+      antialias: true,
+      stencil: true,
+      adaptToDeviceRatio: true,
+      
+    })
     engineRef.current = engine
 
     const scene = new Scene(engine)
     sceneRef.current = scene
     scene.clearColor = new Color4(0.071, 0.071, 0.086, 1) // #121216
 
-    const camera = new ArcRotateCamera('cam', Math.PI / 4, Math.PI / 3, 5, Vector3.Zero(), scene)
-    camera.lowerRadiusLimit = 0.1
-    camera.wheelPrecision = 50
+    const camera = new ArcRotateCamera(
+      "camera",
+      Math.PI / 2,
+      Math.PI / 3,
+      3.5,
+      Vector3.Zero(),
+      scene
+    );
+
+    camera.minZ = 0.01;
+    camera.inertia = 0.85;
+    camera.wheelPrecision = 150;
+    camera.pinchPrecision = 400;
     camera.attachControl(canvas, true)
     cameraRef.current = camera
+    
+    onCameraReady?.(camera)
 
-    const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), scene)
-    ambient.intensity = 0.55
-
+    const amb = new HemisphericLight('amb', new Vector3(0, 1, 0), scene)
+    amb.intensity = 0.55
     const key = new DirectionalLight('key', new Vector3(3, 5, 4), scene)
     key.intensity = 1.05
-
     const fill = new DirectionalLight('fill', new Vector3(-4, -2, -3), scene)
-    fill.diffuse.set(0.48, 0.36, 1) // leggero tint viola
+    fill.diffuse.set(0.48, 0.36, 1)
     fill.intensity = 0.45
 
     engine.runRenderLoop(() => scene.render())
 
-    const onResize = () => engine.resize()
-    window.addEventListener('resize', onResize)
+    const t0 = setTimeout(() => engine.resize(), 0)
+    const ro = new ResizeObserver(() => engine.resize())
+    ro.observe(canvas)
 
     return () => {
-      window.removeEventListener('resize', onResize)
+      clearTimeout(t0)
+      ro.disconnect()
+      onCameraReady?.(null)
       engine.stopRenderLoop()
       scene.dispose()
       engine.dispose()
@@ -113,14 +109,82 @@ export const ViewerPanel = forwardRef<ViewerHandle>((_props, ref) => {
       sceneRef.current = null
       cameraRef.current = null
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Caricamento modello quando buffer cambia ────────────────────
+  useEffect(() => {
+    const scene = sceneRef.current
+    const cam = cameraRef.current
+    if (!scene || !cam) return  // engine non ancora pronto
+
+    // Ripulisce contenuto precedente
+    scene.meshes.slice().forEach(m => m.dispose())
+    scene.materials.slice().forEach(m => m.dispose())
+    scene.textures.slice().forEach(t => t.dispose())
+
+    if (!buffer) return  // scena vuota (reset)
+
+    let cancelled = false  // cancellation token locale
+
+      ; (async () => {
+        console.log(`[ViewerPanel] load start — ${(buffer.byteLength / 1e6).toFixed(1)} MB`)
+
+        const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
+        try {
+          await AppendSceneAsync(file, scene)
+        } catch (e) {
+          if (!cancelled) console.error('[ViewerPanel] AppendSceneAsync failed:', e)
+          return
+        }
+
+        if (cancelled || scene.isDisposed) return
+
+        console.log(`[ViewerPanel] ${scene.meshes.length} mesh caricati`)
+
+        scene.meshes.forEach(m => m.computeWorldMatrix(true))
+        await new Promise<void>(r => requestAnimationFrame(() => r()))
+
+        if (cancelled || scene.isDisposed) return
+
+        // Camera fit sul bounding box reale
+        try {
+          const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
+          if (visible.length > 0) {
+            let xMin = Infinity, yMin = Infinity, zMin = Infinity
+            let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity
+            for (const m of visible) {
+              const bi = m.getBoundingInfo()
+              const mn = bi.boundingBox.minimumWorld
+              const mx = bi.boundingBox.maximumWorld
+              if (mn.x < xMin) xMin = mn.x; if (mx.x > xMax) xMax = mx.x
+              if (mn.y < yMin) yMin = mn.y; if (mx.y > yMax) yMax = mx.y
+              if (mn.z < zMin) zMin = mn.z; if (mx.z > zMax) zMax = mx.z
+            }
+            const size = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2)
+            console.log(`[ViewerPanel] bounding box size=${size.toFixed(2)}`)
+            cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
+            cam.radius = Math.max(size, 0.01) * 1.2
+          }
+        } catch (e) {
+          console.warn('[ViewerPanel] camera fit error:', e)
+        }
+        cam.alpha = Math.PI / 4
+        cam.beta = Math.PI / 3
+      })()
+
+    return () => { cancelled = true }  // cleanup: annulla il load in corso
+  }, [buffer]) // dipendenza su buffer: si ri-esegue ogni volta che buffer cambia
 
   return (
     <canvas
       ref={canvasRef}
-      style={{ display: 'block', width: '100%', height: '100%' }}
+      style={{
+        display: 'block',
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        width: '100%', height: '100%',
+        touchAction: 'none',
+      }}
     />
   )
-})
-
-ViewerPanel.displayName = 'ViewerPanel'
+}

@@ -36,7 +36,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
     onChange({ ...options, texture: { ...options.texture, [key]: val } })
   }
 
-  const { weld, dedup, prune, draco } = options.geometry
+  const { weld, dedup, prune, draco, simplify, simplifyRatio, simplifyError } = options.geometry
   const { enabled, format, quality } = options.texture
 
   return (
@@ -48,6 +48,37 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
         <Toggle name="Dedup" desc="Rimuove accessor duplicati"      on={dedup} onToggle={() => setGeo('dedup', !dedup)} disabled={disabled} />
         <Toggle name="Prune" desc="Elimina nodi inutilizzati"       on={prune} onToggle={() => setGeo('prune', !prune)} disabled={disabled} />
         <Toggle name="Draco" desc="Compressione mesh Draco"         on={draco} onToggle={() => setGeo('draco', !draco)} disabled={disabled} />
+        <Toggle name="Simplify" desc="Semplificazione geometria"   on={simplify} onToggle={() => setGeo('simplify', !simplify)} disabled={disabled} />
+        {simplify && (
+          <>
+            <div className="ll-quality-row">
+              <span className="ll-quality-label">Rapporto</span>
+              <span className="ll-quality-val">{simplifyRatio ?? 0.5}</span>
+            </div>
+            <input
+              type="range"
+              min={0.01}
+              max={1}
+              step={0.01}
+              value={simplifyRatio ?? 0.5}
+              disabled={disabled}
+              onChange={(e) => setGeo('simplifyRatio', Number(e.target.value))}
+            />
+            <div className="ll-quality-row">
+              <span className="ll-quality-label">Errore</span>
+              <span className="ll-quality-val">{simplifyError ?? 0.05}</span>
+            </div>
+            <input
+              type="range"
+              min={0.001}
+              max={1}
+              step={0.001}
+              value={simplifyError ?? 0.05}
+              disabled={disabled}
+              onChange={(e) => setGeo('simplifyError', Number(e.target.value))}
+            />
+          </>
+        )}
       </div>
 
       <div className="ll-divider" />

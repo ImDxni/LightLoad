@@ -16,6 +16,7 @@
     "@gltf-transform/core": "^4.4.0",
     "@gltf-transform/functions": "^4.4.0",
     "draco3d": "^1.5.7",
+    "meshoptimizer": "^1.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

@@ -76,4 +76,31 @@ if (existsSync(libktxJs) && existsSync(libktxWasm)) {
   }
 }
 
+
+// ── Decoder KTX2 di Babylon (Web Worker) ────────────────────────────────────
+const babylonDecoderJs = resolve(outDir, 'babylon.ktx2Decoder.js')
+
+if (existsSync(babylonDecoderJs)) {
+  console.log('✓  ./public/wasm/babylon.ktx2Decoder.js  (già presente)')
+} else {
+  console.log('\n⬇  Scarico babylon.ktx2Decoder.js da CDN ufficiale...')
+  const DECODER_URL = 'https://cdn.babylonjs.com/babylon.ktx2Decoder.js'
+
+  try {
+    // Top-level await è supportato se il file è un modulo (come sembra dal tuo import.meta)
+    const res = await fetch(DECODER_URL)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    
+    // Essendo un file JS di testo, text() è sufficiente
+    const text = await res.text()
+    writeFileSync(babylonDecoderJs, text)
+    console.log('✓  ./public/wasm/babylon.ktx2Decoder.js')
+  } catch (e) {
+    console.warn(`⚠  Download fallito: ${e.message}`)
+    console.warn('   Scarica manualmente da:')
+    console.warn(`   ${DECODER_URL}`)
+    console.warn('   e salvalo come babylon.ktx2Decoder.js in public/wasm/')
+  }
+}
+
 console.log('\n✅ Setup WASM completato.')
