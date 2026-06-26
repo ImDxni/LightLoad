@@ -1,14 +1,9 @@
 import type { GLBMetrics } from '../types/pipeline'
+import { fmtSize } from '../lib/format'
 
 interface Props {
   before: GLBMetrics | null
   after: GLBMetrics | null
-}
-
-function fmtSize(bytes: number) {
-  if (bytes <= 0) return '—'
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 function fmt(n: number) {

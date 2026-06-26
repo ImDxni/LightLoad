@@ -72,7 +72,6 @@ export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
     camera.minZ = 0.01
     camera.inertia = 0.85
     camera.wheelPrecision = 150
-    camera.panningSensibility = 5000
     camera.pinchPrecision = 400
     camera.attachControl(canvas, true)
     cameraRef.current = camera

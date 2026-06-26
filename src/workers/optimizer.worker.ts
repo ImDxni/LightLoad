@@ -10,6 +10,85 @@ function progress(message: string, percent: number) { send({ type: 'progress', m
 function warn(message: string) { send({ type: 'warning', message }) }
 
 // -------------------------------------------------------------------
+// Decodifica texture
+// -------------------------------------------------------------------
+
+/**
+ * Decodifica un'immagine in RGBA NON premoltiplicato via WebCodecs.
+ *
+ * Il canvas 2D memorizza i colori premoltiplicati per l'alpha: ogni texel con
+ * alpha=0 perde l'RGB (torna nero, non recuperabile) e in fase di mipmap quel
+ * nero sbava nelle isole UV sottili. ImageDecoder + copyTo con format 'RGBA'
+ * restituisce pixel un-premultiplied (garantito dalla spec W3C) ed evita il
+ * round-trip sul canvas. copyTo gestisce anche la conversione da formati YUV
+ * (i JPEG decodificano spesso in I420), quindi non serve gestire i formati a mano.
+ */
+async function decodeTextureToRGBA(
+  image: Uint8Array,
+  mimeType: string,
+): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
+  const decoder = new ImageDecoder({
+    data: image,
+    type: mimeType,
+    // niente conversione sRGB: preserva normal map / ORM (dati non-colore)
+    colorSpaceConversion: 'none',
+  })
+
+  let frame: VideoFrame | undefined
+  try {
+    const decoded = await decoder.decode()
+    frame = decoded.image
+
+    const width = frame.displayWidth
+    const height = frame.displayHeight
+
+    const buffer = new Uint8Array(frame.allocationSize({ format: 'RGBA' }))
+    const layout = await frame.copyTo(buffer, { format: 'RGBA' })
+
+    const tightStride = width * 4
+    const { offset, stride } = layout[0]
+
+    // Fast path: il layout è già tightly-packed
+    if (offset === 0 && stride === tightStride && buffer.byteLength === tightStride * height) {
+      return { data: new Uint8ClampedArray(buffer.buffer), width, height }
+    }
+
+    // Ricompatta riga per riga rispettando offset e stride del layout
+    const packed = new Uint8ClampedArray(tightStride * height)
+    for (let y = 0; y < height; y++) {
+      const srcStart = offset + y * stride
+      packed.set(buffer.subarray(srcStart, srcStart + tightStride), y * tightStride)
+    }
+    return { data: packed, width, height }
+  } finally {
+    // Libera la memoria nativa: senza questo si perde memoria a ogni texture
+    frame?.close()
+    decoder.close()
+  }
+}
+
+/**
+ * Vecchio percorso canvas 2D. Fallback quando ImageDecoder non è disponibile
+ * (es. Safari datati). Premoltiplica l'alpha: usato solo come ultima risorsa.
+ */
+async function decodeViaCanvas(
+  image: Uint8Array,
+  mimeType: string,
+): Promise<{ data: Uint8ClampedArray; width: number; height: number }> {
+  const blob = new Blob([image as BlobPart], { type: mimeType })
+  const bmp = await createImageBitmap(blob)
+  try {
+    const canvas = new OffscreenCanvas(bmp.width, bmp.height)
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(bmp, 0, 0)
+    const data = ctx.getImageData(0, 0, bmp.width, bmp.height)
+    return { data: data.data, width: data.width, height: data.height }
+  } finally {
+    bmp.close()
+  }
+}
+
+// -------------------------------------------------------------------
 // Compressione texture KTX2
 // -------------------------------------------------------------------
 async function compressTextures(doc: Document, options: OptimizationOptions): Promise<void> {
@@ -45,15 +124,24 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
     const image = tex.getImage()
     if (!image) continue
 
-    let imageData: ImageData
+    const mimeType = tex.getMimeType()
+    let imageData: { data: Uint8ClampedArray | Uint8Array; width: number; height: number }
     try {
-      const blob = new Blob([image], { type: tex.getMimeType() })
-      const bmp = await createImageBitmap(blob)
-      const canvas = new OffscreenCanvas(bmp.width, bmp.height)
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(bmp, 0, 0)
-      imageData = ctx.getImageData(0, 0, bmp.width, bmp.height)
-      bmp.close()
+      if (typeof ImageDecoder !== 'undefined' && (await ImageDecoder.isTypeSupported(mimeType))) {
+        try {
+          imageData = await decodeTextureToRGBA(image, mimeType)
+        } catch {
+          warn(
+            `Decodifica WebCodecs non disponibile per "${name}": le texture con trasparenza potrebbero presentare artefatti.`,
+          )
+          imageData = await decodeViaCanvas(image, mimeType)
+        }
+      } else {
+        warn(
+          `Decodifica WebCodecs non disponibile per "${name}": le texture con trasparenza potrebbero presentare artefatti.`,
+        )
+        imageData = await decodeViaCanvas(image, mimeType)
+      }
     } catch (e) {
       warn(`Texture "${name}": decodifica fallita, saltata (${e})`)
       continue

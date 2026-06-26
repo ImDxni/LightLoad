@@ -80,7 +80,6 @@ export async function loadKtxModule(): Promise<KtxModule> {
   if (!res.ok) throw new Error('libktx.js non trovato in /wasm/. Esegui "npm run setup:wasm".')
 
   const mod = { exports: {} as Record<string, unknown> }
-  // eslint-disable-next-line no-new-func
   new Function('module', 'exports', await res.text())(mod, mod.exports)
 
   const factory = mod.exports as unknown as KtxFactory

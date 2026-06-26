@@ -17,7 +17,6 @@ async function loadDracoModule(jsPath: string): Promise<unknown> {
   const scriptText = await res.text()
 
   const mod = { exports: {} as Record<string, unknown> }
-  // eslint-disable-next-line no-new-func
   new Function('module', 'exports', scriptText)(mod, mod.exports)
 
   const factory = mod.exports as unknown as (opts: unknown) => unknown

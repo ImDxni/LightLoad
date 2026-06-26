@@ -9,6 +9,7 @@ import { ViewerPanel } from './components/ViewerPanel'
 import { MetricsTable } from './components/MetricsTable'
 import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
+import { fmtSize } from './lib/format'
 import './App.css'
 
 const DEFAULT_OPTIONS: OptimizationOptions = {
@@ -18,19 +19,10 @@ const DEFAULT_OPTIONS: OptimizationOptions = {
 
 type View = 'empty' | 'processing' | 'result'
 
-function fmtSize(bytes: number) {
-  if (bytes <= 0) return '—'
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 export default function App() {
-  const [view, setView] = useState<View>('empty')
   const [filename, setFilename] = useState<string | null>(null)
   const [originalBuffer, setOriginalBuffer] = useState<ArrayBuffer | null>(null)
-  const [optimizedBuffer, setOptimizedBuffer] = useState<ArrayBuffer | null>(null)
   const [beforeMetrics, setBeforeMetrics] = useState<GLBMetrics | null>(null)
-  const [afterMetrics, setAfterMetrics] = useState<GLBMetrics | null>(null)
   const [options, setOptions] = useState<OptimizationOptions>(DEFAULT_OPTIONS)
   const [dropError, setDropError] = useState<string | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
@@ -44,6 +36,14 @@ export default function App() {
   }, [])
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
+
+  // Stato derivato dal worker — niente mirror in useState (evita render a cascata)
+  const optimizedBuffer = optState.phase === 'done' ? optState.optimizedBuffer : null
+  const afterMetrics    = optState.phase === 'done' ? optState.metrics : null
+  const view: View =
+    !originalBuffer ? 'empty'
+      : optState.phase === 'running' ? 'processing'
+        : 'result'
 
   // ── Camera sync ────────────────────────────────────────────────────
   const syncingRef = useRef(false)
@@ -91,11 +91,8 @@ export default function App() {
   const loadFile = useCallback(async (buffer: ArrayBuffer, name: string) => {
     setDropError(null)
     resetOpt()
-    setOptimizedBuffer(null)
-    setAfterMetrics(null)
     setFilename(name)
     setOriginalBuffer(buffer)
-    setView('result')
 
     try {
       const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -139,20 +136,8 @@ export default function App() {
   // ── Optimization ────────────────────────────────────────────────────
   const handleOptimize = useCallback(() => {
     if (!originalBuffer) return
-    setView('processing')
     optimize(originalBuffer.slice(0), options)
   }, [originalBuffer, options, optimize])
-
-  useEffect(() => {
-    if (optState.phase === 'done') {
-      setOptimizedBuffer(optState.optimizedBuffer)
-      setAfterMetrics(optState.metrics)
-      setView('result')
-    }
-    if (optState.phase === 'error') {
-      setView('result')
-    }
-  }, [optState])
 
   // ── Download ─────────────────────────────────────────────────────────
   const handleDownload = useCallback(() => {
@@ -170,11 +155,8 @@ export default function App() {
   const handleReset = useCallback(() => {
     resetOpt()
     setOriginalBuffer(null)
-    setOptimizedBuffer(null)
     setBeforeMetrics(null)
-    setAfterMetrics(null)
     setFilename(null)
-    setView('empty')
     setFileInputKey(k => k + 1)
   }, [resetOpt])
 

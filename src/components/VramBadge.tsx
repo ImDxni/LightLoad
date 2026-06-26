@@ -1,10 +1,5 @@
 import type { VramBreakdown } from '../types/pipeline'
-
-function fmtSize(bytes: number) {
-  if (bytes <= 0) return '—'
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+import { fmtSize } from '../lib/format'
 
 interface Props {
   vram: VramBreakdown | null | undefined
