@@ -27,8 +27,9 @@ copy(resolve(babylonAssets, 'Basis', 'basis_transcoder.js'),   resolve(outDir, '
 copy(resolve(babylonAssets, 'Basis', 'basis_transcoder.wasm'), resolve(outDir, 'basis_transcoder.wasm'))
 
 const dracoDir = dirname(require.resolve('draco3d'))
-copy(resolve(dracoDir, 'draco_encoder.wasm'), resolve(outDir, 'draco_encoder.wasm'))
-copy(resolve(dracoDir, 'draco_decoder.wasm'), resolve(outDir, 'draco_decoder.wasm'))
+copy(resolve(dracoDir, 'draco_encoder_nodejs.js'), resolve(outDir, 'draco_encoder.js'))  // glue JS (browser-compatible)
+copy(resolve(dracoDir, 'draco_encoder.wasm'),      resolve(outDir, 'draco_encoder.wasm'))
+copy(resolve(dracoDir, 'draco_decoder.wasm'),      resolve(outDir, 'draco_decoder.wasm'))
 
 // ── libktx da KhronosGroup (encoder KTX2) ───────────────────────────────────
 const libktxJs   = resolve(outDir, 'libktx.js')

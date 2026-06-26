@@ -2,15 +2,30 @@ import { weld, dedup, prune, draco } from '@gltf-transform/functions'
 import type { Document } from '@gltf-transform/core'
 import type { GeometryOptions } from '../types/pipeline'
 
-// Il modulo draco3d esporta una factory CommonJS; in worker ESM va importato così
+/**
+ * Carica il modulo encoder Draco via importScripts (Web Worker only).
+ *
+ * draco_encoder_nodejs.js definisce DracoEncoderModule come var top-level.
+ * In un worker, dopo importScripts, diventa self.DracoEncoderModule.
+ * Il file viene caricato a runtime (non bundled da Vite), quindi i
+ * require('fs')/require('path') interni (dentro if(isNode)) non vengono
+ * mai chiamati perché isNode === false in browser.
+ */
 async function loadDracoEncoder(): Promise<unknown> {
-  // draco3d cerca il suo .wasm nella stessa directory del .js.
-  // Forziamo il percorso verso /wasm/ dove abbiamo copiato i file.
-  const mod = await import('draco3d')
-  const factory = (mod as unknown as { default: (opts: unknown) => Promise<unknown> }).default ?? mod
+  if (typeof (globalThis as Record<string, unknown>).DracoEncoderModule === 'undefined') {
+    // @ts-expect-error – importScripts disponibile solo nei worker
+    importScripts('/wasm/draco_encoder.js')
+  }
 
-  // @ts-expect-error – tipo opaco
-  return (factory as (o: unknown) => Promise<unknown>)({
+  const factory = (globalThis as Record<string, unknown>).DracoEncoderModule as (
+    opts: unknown,
+  ) => Promise<unknown>
+
+  if (typeof factory !== 'function') {
+    throw new Error('DracoEncoderModule non trovato dopo importScripts draco_encoder.js')
+  }
+
+  return factory({
     locateFile: (filename: string) => `/wasm/${filename}`,
   })
 }
@@ -40,7 +55,7 @@ export async function applyGeometryOps(
   }
 
   if (options.draco) {
-    onProgress('Draco: compressione geometria…')
+    onProgress('Draco: caricamento encoder e compressione geometria…')
     const encoder = await loadDracoEncoder()
     await doc.transform(draco({ encoder }))
   }

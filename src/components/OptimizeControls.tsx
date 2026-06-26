@@ -1,5 +1,4 @@
 import type { OptimizationOptions } from '../types/pipeline'
-import styles from './OptimizeControls.module.css'
 
 interface Props {
   options: OptimizationOptions
@@ -8,138 +7,103 @@ interface Props {
 }
 
 function Toggle({
-  label,
-  checked,
-  onChange,
-  disabled,
-  hint,
+  name, desc, on, onToggle, disabled,
 }: {
-  label: string
-  checked: boolean
-  onChange: (v: boolean) => void
-  disabled?: boolean
-  hint?: string
+  name: string; desc: string; on: boolean; onToggle: () => void; disabled?: boolean
 }) {
   return (
-    <label className={`${styles.toggle} ${disabled ? styles.disabled : ''}`} title={hint}>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className={styles.toggleSlider} />
-      {label}
-    </label>
+    <div
+      className="ll-toggle-row"
+      onClick={disabled ? undefined : onToggle}
+      style={{ opacity: disabled ? 0.45 : 1 }}
+    >
+      <div className="ll-toggle-row-info">
+        <div className="ll-toggle-name">{name}</div>
+        <div className="ll-toggle-desc">{desc}</div>
+      </div>
+      <div className={`ll-toggle-track ll-toggle-track--${on ? 'on' : 'off'}`}>
+        <div className={`ll-toggle-knob ll-toggle-knob--${on ? 'on' : 'off'}`} />
+      </div>
+    </div>
   )
 }
 
 export function OptimizeControls({ options, onChange, disabled }: Props) {
-  function setGeo<K extends keyof OptimizationOptions['geometry']>(
-    key: K,
-    val: OptimizationOptions['geometry'][K],
-  ) {
+  function setGeo<K extends keyof typeof options.geometry>(key: K, val: typeof options.geometry[K]) {
     onChange({ ...options, geometry: { ...options.geometry, [key]: val } })
   }
-
-  function setTex<K extends keyof OptimizationOptions['texture']>(
-    key: K,
-    val: OptimizationOptions['texture'][K],
-  ) {
+  function setTex<K extends keyof typeof options.texture>(key: K, val: typeof options.texture[K]) {
     onChange({ ...options, texture: { ...options.texture, [key]: val } })
   }
 
-  return (
-    <div className={styles.panel}>
-      <section>
-        <h4 className={styles.sectionTitle}>Geometria</h4>
-        <Toggle
-          label="Weld"
-          checked={options.geometry.weld}
-          onChange={(v) => setGeo('weld', v)}
-          disabled={disabled}
-          hint="Fonde vertici coincidenti"
-        />
-        <Toggle
-          label="Dedup"
-          checked={options.geometry.dedup}
-          onChange={(v) => setGeo('dedup', v)}
-          disabled={disabled}
-          hint="Rimuove accessor/texture duplicati"
-        />
-        <Toggle
-          label="Prune"
-          checked={options.geometry.prune}
-          onChange={(v) => setGeo('prune', v)}
-          disabled={disabled}
-          hint="Elimina nodi e materiali inutilizzati"
-        />
-        <Toggle
-          label="Draco"
-          checked={options.geometry.draco}
-          onChange={(v) => setGeo('draco', v)}
-          disabled={disabled}
-          hint="Compressione geometria Draco (richiede viewer compatibile)"
-        />
-      </section>
+  const { weld, dedup, prune, draco } = options.geometry
+  const { enabled, format, quality } = options.texture
 
-      <section>
-        <h4 className={styles.sectionTitle}>Texture KTX2</h4>
+  return (
+    <>
+      {/* Geometria */}
+      <div>
+        <div className="ll-section-label">Geometria</div>
+        <Toggle name="Weld"  desc="Salda i vertici coincidenti"    on={weld}  onToggle={() => setGeo('weld', !weld)}   disabled={disabled} />
+        <Toggle name="Dedup" desc="Rimuove accessor duplicati"      on={dedup} onToggle={() => setGeo('dedup', !dedup)} disabled={disabled} />
+        <Toggle name="Prune" desc="Elimina nodi inutilizzati"       on={prune} onToggle={() => setGeo('prune', !prune)} disabled={disabled} />
+        <Toggle name="Draco" desc="Compressione mesh Draco"         on={draco} onToggle={() => setGeo('draco', !draco)} disabled={disabled} />
+      </div>
+
+      <div className="ll-divider" />
+
+      {/* Texture */}
+      <div>
+        <div className="ll-section-label">Texture</div>
         <Toggle
-          label="Abilita KTX2"
-          checked={options.texture.enabled}
-          onChange={(v) => setTex('enabled', v)}
+          name="KTX2 / Basis Universal"
+          desc="Richiede libktx.wasm in /wasm/"
+          on={enabled}
+          onToggle={() => setTex('enabled', !enabled)}
           disabled={disabled}
-          hint="Richiede basis_encoder.wasm (vedi README)"
         />
-        {options.texture.enabled && (
+
+        {enabled && (
           <>
-            <div className={styles.radioGroup}>
-              <label className={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="format"
-                  value="etc1s"
-                  checked={options.texture.format === 'etc1s'}
-                  disabled={disabled}
-                  onChange={() => setTex('format', 'etc1s')}
-                />
-                ETC1S <span className={styles.hint}>(massima compressione)</span>
-              </label>
-              <label className={styles.radioLabel}>
-                <input
-                  type="radio"
-                  name="format"
-                  value="uastc"
-                  checked={options.texture.format === 'uastc'}
-                  disabled={disabled}
-                  onChange={() => setTex('format', 'uastc')}
-                />
-                UASTC <span className={styles.hint}>(massima qualità)</span>
-              </label>
+            <div style={{ fontSize: 12, color: '#8a8a95', margin: '9px 0 0' }}>Codec di compressione</div>
+            <div className="ll-seg">
+              <div
+                className={`ll-seg-opt ll-seg-opt--${format === 'etc1s' ? 'active' : 'inactive'}`}
+                onClick={disabled ? undefined : () => setTex('format', 'etc1s')}
+              >
+                ETC1S
+              </div>
+              <div
+                className={`ll-seg-opt ll-seg-opt--${format === 'uastc' ? 'active' : 'inactive'}`}
+                onClick={disabled ? undefined : () => setTex('format', 'uastc')}
+              >
+                UASTC
+              </div>
             </div>
 
-            <div className={styles.sliderGroup}>
-              <label className={styles.sliderLabel}>
-                Qualità: <strong>{options.texture.quality}</strong>
-              </label>
-              <input
-                type="range"
-                min={1}
-                max={255}
-                value={options.texture.quality}
-                disabled={disabled}
-                onChange={(e) => setTex('quality', Number(e.target.value))}
-                className={styles.slider}
-              />
-              <div className={styles.sliderTicks}>
-                <span>Bassa</span>
-                <span>Alta</span>
+            <div className="ll-quality-row">
+              <span className="ll-quality-label">Qualità</span>
+              <span className="ll-quality-val">{quality}</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={255}
+              value={quality}
+              disabled={disabled}
+              onChange={(e) => setTex('quality', Number(e.target.value))}
+            />
+
+            {/* Warning texture non multiple di 4 — statica per ora */}
+            <div className="ll-warn">
+              <span className="ll-warn-icon">⚠</span>
+              <div className="ll-warn-text">
+                Le texture con dimensioni non multiple di 4 px verranno segnalate nella console.
               </div>
             </div>
           </>
         )}
-      </section>
-    </div>
+      </div>
+    </>
   )
 }

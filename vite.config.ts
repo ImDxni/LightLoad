@@ -6,8 +6,4 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
-  optimizeDeps: {
-    exclude: ['draco3d'],
-  },
-  assetsInclude: ['**/*.wasm'],
 })

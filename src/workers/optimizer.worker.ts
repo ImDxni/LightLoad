@@ -11,7 +11,7 @@
  */
 
 import { WebIO, type Document } from '@gltf-transform/core'
-import { KHRDracoMeshCompression, KHRTextureBasisu } from '@gltf-transform/extensions'
+import { ALL_EXTENSIONS, KHRTextureBasisu } from '@gltf-transform/extensions'
 import type { WorkerRequest, WorkerResponse, OptimizationOptions } from '../types/pipeline'
 import { extractMetrics, findNonPow4Textures } from '../lib/metricsExtractor'
 import { applyGeometryOps } from '../lib/geometryOps'
@@ -109,7 +109,7 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   try {
     progress('Parsing GLB…', 5)
 
-    const io = new WebIO().registerExtensions([KHRDracoMeshCompression, KHRTextureBasisu])
+    const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 
     let doc: Document
     try {
