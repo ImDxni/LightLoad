@@ -52,22 +52,9 @@ body {
 }
 
 .ll-logo-icon {
-  position: relative;
+  display: block;
   width: 22px;
   height: 22px;
-}
-.ll-logo-icon-bg {
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #8f82ff, #6b4dff);
-}
-.ll-logo-icon-inner {
-  position: absolute;
-  left: 6px; top: 6px;
-  width: 10px; height: 10px;
-  border-radius: 3px;
-  background: rgba(11,11,14,0.88);
 }
 
 .ll-logo-name {

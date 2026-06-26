@@ -177,10 +177,7 @@ export default function App() {
       <header className="ll-header">
         <div className="ll-header-left">
           <div className="ll-logo">
-            <div className="ll-logo-icon">
-              <div className="ll-logo-icon-bg" />
-              <div className="ll-logo-icon-inner" />
-            </div>
+            <img src="/favicon.svg" className="ll-logo-icon" width={22} height={22} alt="Lightload" />
             <span className="ll-logo-name">Lightload</span>
             <span className="ll-beta">BETA</span>
           </div>
