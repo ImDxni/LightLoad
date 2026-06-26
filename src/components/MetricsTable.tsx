@@ -51,12 +51,6 @@ export function MetricsTable({ before, after }: Props) {
       aVal: after ? fmt(after.triangleCount) : '—',
       delta: after ? delta(before.triangleCount, after.triangleCount) : null,
     },
-    {
-      label: 'Texture',
-      bVal: String(before.textureCount),
-      aVal: after ? String(after.textureCount) : '—',
-      delta: null,
-    },
   ]
 
   return (

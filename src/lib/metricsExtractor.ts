@@ -1,7 +1,16 @@
 import type { Document } from '@gltf-transform/core'
 import type { GLBMetrics, TextureInfo } from '../types/pipeline'
+import { computeVramBreakdown } from './vram'
 
-export function extractMetrics(doc: Document, fileSize: number): GLBMetrics {
+/**
+ * @param ktx2Format modo KTX2 di destinazione, usato solo per pesare in VRAM le
+ *                   texture compresse (image/ktx2). Irrilevante per png/jpg.
+ */
+export function extractMetrics(
+  doc: Document,
+  fileSize: number,
+  ktx2Format: 'etc1s' | 'uastc' = 'etc1s',
+): GLBMetrics {
   let vertexCount = 0
   let triangleCount = 0
 
@@ -67,6 +76,7 @@ export function extractMetrics(doc: Document, fileSize: number): GLBMetrics {
     triangleCount: Math.round(triangleCount),
     textureCount: textures.length,
     textures,
+    vram: computeVramBreakdown(doc, ktx2Format),
   }
 }
 

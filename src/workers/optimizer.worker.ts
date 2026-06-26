@@ -111,7 +111,7 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
 
     progress('Scrittura GLB…', 92)
     const outBuffer = await io.writeBinary(doc)
-    const afterMetrics = extractMetrics(doc, outBuffer.byteLength)
+    const afterMetrics = extractMetrics(doc, outBuffer.byteLength, options.texture.format)
 
     progress('Completato!', 100)
     send({ type: 'success', buffer: outBuffer.buffer, metrics: afterMetrics })

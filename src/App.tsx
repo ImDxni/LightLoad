@@ -7,11 +7,12 @@ import { extractMetrics } from './lib/metricsExtractor'
 import type { OptimizationOptions, GLBMetrics } from './types/pipeline'
 import { ViewerPanel } from './components/ViewerPanel'
 import { MetricsTable } from './components/MetricsTable'
+import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
 import './App.css'
 
 const DEFAULT_OPTIONS: OptimizationOptions = {
-  geometry: { weld: true, dedup: true, prune: true, draco: false, simplify: false, simplifyRatio: 0.5, simplifyError: 0.01 },
+  geometry: { weld: true, dedup: true, prune: true, draco: false, simplify: false, simplifyRatio: 0.5, simplifyError: 0.05 },
   texture: { enabled: false, format: 'etc1s', quality: 80 },
 }
 
@@ -241,7 +242,7 @@ export default function App() {
               </div>
               <div className="ll-drop-title">
                 <h2>Trascina qui un file .glb</h2>
-                <p>oppure <span>clicca per selezionare</span> · max 100 MB</p>
+                <p>oppure <span>clicca per selezionare</span></p>
               </div>
               <div className="ll-drop-privacy">
                 <span className="ll-drop-privacy-dot" />
@@ -296,7 +297,10 @@ export default function App() {
                       <ViewerPanel buffer={originalBuffer} onCameraReady={handleBeforeCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
-                      <span className="ll-viewer-size">{beforeSize}</span>
+                      <span className="ll-viewer-size-group">
+                        <span className="ll-viewer-size">{beforeSize}</span>
+                        <VramBadge vram={beforeMetrics?.vram} />
+                      </span>
                       <span className="ll-viewer-badge ll-viewer-badge--neutral">Non ottimizzato</span>
                     </div>
                   </div>
@@ -316,7 +320,10 @@ export default function App() {
                       <ViewerPanel buffer={optimizedBuffer} onCameraReady={handleAfterCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
-                      <span className="ll-viewer-size">{optimizedBuffer ? afterSize : '—'}</span>
+                      <span className="ll-viewer-size-group">
+                        <span className="ll-viewer-size">{optimizedBuffer ? afterSize : '—'}</span>
+                        {optimizedBuffer && <VramBadge vram={afterMetrics?.vram} />}
+                      </span>
                       {savings !== null && savings > 0
                         ? <span className="ll-viewer-badge ll-viewer-badge--good">↓ {savings}%</span>
                         : <span className="ll-viewer-badge ll-viewer-badge--neutral">—</span>

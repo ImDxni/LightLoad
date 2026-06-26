@@ -27,12 +27,20 @@ export interface TextureInfo {
   mimeType: string
 }
 
+/** Stima del peso in VRAM (byte), suddivisa per categoria. */
+export interface VramBreakdown {
+  geometry: number
+  textures: number
+  total: number
+}
+
 export interface GLBMetrics {
   fileSize: number
   vertexCount: number
   triangleCount: number
   textureCount: number
   textures: TextureInfo[]
+  vram: VramBreakdown
 }
 
 /** Messaggi inviati dalla UI al worker */
