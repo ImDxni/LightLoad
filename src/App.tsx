@@ -291,7 +291,7 @@ export default function App() {
         <div className="ll-header-right">
           <a href={route === 'faq' ? '#home' : '#faq'} className="ll-nav-link">{t('faq.nav')}</a>
           <LanguageSwitcher />
-          <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
+          <a href="https://github.com/ImDxni/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
             <span className="ll-github-stars">★ {stars ?? '—'}</span>
             <span>{t('header.github')}</span>
             <span className="ll-github-arrow">↗</span>
