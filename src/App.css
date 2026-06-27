@@ -316,6 +316,19 @@ body {
   gap: 22px;
   padding: 22px 24px;
   overflow: auto;
+  transition: gap .35s cubic-bezier(.4,0,.2,1);
+}
+/* Focus mode: la sidebar scivola via e i viewer occupano tutto lo spazio */
+.ll-result-inner--expanded { gap: 0; }
+.ll-result-inner--expanded .ll-sidebar {
+  flex-basis: 0;
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  opacity: 0;
+  border-color: transparent;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .ll-result-main {
@@ -331,15 +344,51 @@ body {
   gap: 18px;
   height: 400px;
   flex: 0 0 auto;
+  transition: height .35s cubic-bezier(.4,0,.2,1);
+}
+.ll-viewers-row--expanded { height: calc(100vh - 150px); }
+
+/* Barra sotto i viewer: hint sincronizzazione + toggle espansione */
+.ll-viewers-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .ll-sync-hint {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
   color: #65656f;
   font-size: 12px;
+}
+
+.ll-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #cfcfd6;
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all .15s;
+}
+.ll-expand-btn:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.20);
+  color: #ededf2;
+}
+.ll-expand-btn--on {
+  background: rgba(124,92,255,0.16);
+  border-color: rgba(124,92,255,0.5);
+  color: #c9bcff;
 }
 .ll-sync-hint-icon {
   font-family: 'Geist Mono', monospace;
@@ -440,7 +489,11 @@ body {
   background: #121216;
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Su schermi bassi la tabella scrolla internamente invece di spingere il layout */
+  max-height: 34vh;
+  flex: 0 0 auto;
 }
 .ll-metrics-head {
   display: grid;
@@ -452,6 +505,11 @@ body {
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: #65656f;
+  /* Resta visibile durante lo scroll verticale della tabella */
+  position: sticky;
+  top: 0;
+  background: #121216;
+  z-index: 1;
 }
 .ll-metrics-row {
   display: grid;
@@ -575,6 +633,10 @@ body {
   border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px;
   overflow: hidden;
+  transition: flex-basis .35s cubic-bezier(.4,0,.2,1),
+              width .35s cubic-bezier(.4,0,.2,1),
+              padding .35s cubic-bezier(.4,0,.2,1),
+              opacity .25s ease;
 }
 .ll-sidebar-head {
   padding: 16px 18px;
@@ -781,4 +843,98 @@ input[type='range'] {
   border-radius: 8px;
   background: rgba(248,113,113,0.08);
   border: 1px solid rgba(248,113,113,0.20);
+}
+
+/* ── Profili (progressive disclosure) ── */
+.ll-profiles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ll-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  background: #0e0e12;
+  border: 1px solid rgba(255,255,255,0.07);
+  font-family: 'Geist', sans-serif;
+  transition: all .15s;
+}
+.ll-profile:hover:not(:disabled) { border-color: rgba(255,255,255,0.16); }
+.ll-profile:disabled { cursor: not-allowed; opacity: 0.5; }
+.ll-profile--active {
+  border-color: rgba(124,92,255,0.55);
+  background: rgba(124,92,255,0.10);
+}
+.ll-profile-name { font-size: 13px; font-weight: 500; color: #e7e7ec; }
+.ll-profile--active .ll-profile-name { color: #fff; }
+.ll-profile-desc {
+  font-family: 'Geist Mono', monospace;
+  font-size: 10.5px;
+  color: #7a7a84;
+}
+
+/* ── Pannello impostazioni avanzate (collassabile) ── */
+.ll-advanced {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 6px;
+}
+.ll-advanced-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8a95;
+  transition: color .15s;
+}
+.ll-advanced-head:hover { color: #cfcfd6; }
+.ll-advanced-caret { font-size: 11px; transition: transform .18s; }
+.ll-advanced-caret--open { transform: rotate(0deg); }
+.ll-advanced-caret--closed { transform: rotate(-90deg); }
+.ll-advanced-body {
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Bottone fluttuante wireframe ── */
+.ll-wire-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(18,18,22,0.72);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #b9b9c2;
+  transition: all .15s;
+}
+.ll-wire-btn:hover { border-color: rgba(255,255,255,0.22); color: #ededf2; }
+.ll-wire-btn--on {
+  background: rgba(124,92,255,0.18);
+  border-color: rgba(124,92,255,0.55);
+  color: #c9bcff;
 }

@@ -36,7 +36,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
     onChange({ ...options, texture: { ...options.texture, [key]: val } })
   }
 
-  const { weld, dedup, prune, draco, simplify, simplifyRatio, simplifyError } = options.geometry
+  const { weld, dedup, prune, draco, meshopt, simplify, simplifyRatio, simplifyError } = options.geometry
   const { enabled, format, quality } = options.texture
 
   return (
@@ -47,7 +47,12 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
         <Toggle name="Weld"  desc="Salda i vertici coincidenti"    on={weld}  onToggle={() => setGeo('weld', !weld)}   disabled={disabled} />
         <Toggle name="Dedup" desc="Rimuove accessor duplicati"      on={dedup} onToggle={() => setGeo('dedup', !dedup)} disabled={disabled} />
         <Toggle name="Prune" desc="Elimina nodi inutilizzati"       on={prune} onToggle={() => setGeo('prune', !prune)} disabled={disabled} />
-        <Toggle name="Draco" desc="Compressione mesh Draco"         on={draco} onToggle={() => setGeo('draco', !draco)} disabled={disabled} />
+        <Toggle name="Draco" desc="Compressione mesh Draco"         on={draco}
+          onToggle={() => onChange({ ...options, geometry: { ...options.geometry, draco: !draco, meshopt: false } })}
+          disabled={disabled} />
+        <Toggle name="Meshopt" desc="Compressione EXT_meshopt"      on={meshopt}
+          onToggle={() => onChange({ ...options, geometry: { ...options.geometry, meshopt: !meshopt, draco: false } })}
+          disabled={disabled} />
         <Toggle name="Simplify" desc="Semplificazione geometria"   on={simplify} onToggle={() => setGeo('simplify', !simplify)} disabled={disabled} />
         {simplify && (
           <>

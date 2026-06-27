@@ -16,6 +16,7 @@ import type { ILoadingScreen } from '@babylonjs/core'
 
 export interface ViewerPanelProps {
   buffer: ArrayBuffer | null
+  wireframe?: boolean
   onCameraReady?: (camera: ArcRotateCamera | null) => void
 }
 
@@ -47,11 +48,13 @@ function ensureKtxTranscoder() {
   }
 }
 
-export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
+export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: ViewerPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<Engine | null>(null)
   const sceneRef  = useRef<Scene | null>(null)
   const cameraRef = useRef<ArcRotateCamera | null>(null)
+  // Ref per riapplicare il wireframe dopo il caricamento async della mesh (aggiornato nell'effetto)
+  const wireframeRef = useRef(wireframe)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -133,6 +136,8 @@ export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
 
       if (cancelled || scene.isDisposed) return
 
+      scene.materials.forEach(m => { m.wireframe = wireframeRef.current })
+
       try {
         const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
         if (visible.length > 0) {
@@ -157,6 +162,14 @@ export function ViewerPanel({ buffer, onCameraReady }: ViewerPanelProps) {
 
     return () => { cancelled = true }
   }, [buffer])
+
+  // Toggle wireframe senza ricaricare la mesh
+  useEffect(() => {
+    wireframeRef.current = wireframe
+    const scene = sceneRef.current
+    if (!scene) return
+    scene.materials.forEach(m => { m.wireframe = wireframe })
+  }, [wireframe])
 
   return (
     <canvas

@@ -9,24 +9,68 @@ import { ViewerPanel } from './components/ViewerPanel'
 import { MetricsTable } from './components/MetricsTable'
 import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
+import { ProfileSelector } from './components/ProfileSelector'
+import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
 import './App.css'
 
-const DEFAULT_OPTIONS: OptimizationOptions = {
-  geometry: { weld: true, dedup: true, prune: true, draco: false, simplify: false, simplifyRatio: 0.5, simplifyError: 0.05 },
-  texture: { enabled: false, format: 'etc1s', quality: 80 },
-}
+const DEFAULT_PROFILE: Profile = 'ecommerce'
+const DEFAULT_OPTIONS: OptimizationOptions = PROFILE_PRESETS.ecommerce
 
 type View = 'empty' | 'processing' | 'result'
+
+function WireframeToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`ll-wire-btn ll-wire-btn--${active ? 'on' : 'off'}`}
+      onClick={onToggle}
+      title={active ? 'Disattiva wireframe' : 'Attiva wireframe'}
+      aria-pressed={active}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+        <path d="M3 3h18v18H3z" />
+        <path d="M3 9h18 M3 15h18 M9 3v18 M15 3v18" />
+      </svg>
+    </button>
+  )
+}
+
+// Focus mode: ingrandisce i canvas e nasconde la sidebar
+function ExpandToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`ll-expand-btn ll-expand-btn--${active ? 'on' : 'off'}`}
+      onClick={onToggle}
+      aria-pressed={active}
+      title={active ? 'Riduci i viewer' : 'Espandi i viewer'}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        {active
+          ? <path d="M9 4v5H4 M20 9h-5V4 M15 20v-5h5 M4 15h5v5" />
+          : <path d="M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5" />}
+      </svg>
+      {active ? 'Riduci' : 'Espandi'}
+    </button>
+  )
+}
 
 export default function App() {
   const [filename, setFilename] = useState<string | null>(null)
   const [originalBuffer, setOriginalBuffer] = useState<ArrayBuffer | null>(null)
   const [beforeMetrics, setBeforeMetrics] = useState<GLBMetrics | null>(null)
   const [options, setOptions] = useState<OptimizationOptions>(DEFAULT_OPTIONS)
+  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [wireframe, setWireframe] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [dropError, setDropError] = useState<string | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
   const [stars, setStars] = useState<number | null>(null)
+  // Opzioni dell'ultimo risultato prodotto, per capire se i parametri sono cambiati (gerarchia CTA)
+  const [optimizedOptions, setOptimizedOptions] = useState<OptimizationOptions | null>(null)
+  const pendingOptionsRef = useRef<OptimizationOptions | null>(null)
 
   useEffect(() => {
     fetch('https://api.github.com/repos/ImDxni/LightLoad')
@@ -133,11 +177,33 @@ export default function App() {
     reader.readAsArrayBuffer(file)
   }, [loadFile])
 
+  // ── Profili / opzioni ───────────────────────────────────────────────
+  const handleSelectProfile = useCallback((p: Profile) => {
+    setProfile(p)
+    if (p === 'custom') {
+      setAdvancedOpen(true)
+    } else {
+      setAdvancedOpen(false)
+      setOptions(PROFILE_PRESETS[p])
+    }
+  }, [])
+
+  // Ogni modifica manuale nel pannello avanzato passa a "Custom"
+  const handleOptionsChange = useCallback((opts: OptimizationOptions) => {
+    setOptions(opts)
+    setProfile('custom')
+  }, [])
+
   // ── Optimization ────────────────────────────────────────────────────
   const handleOptimize = useCallback(() => {
     if (!originalBuffer) return
+    pendingOptionsRef.current = options
     optimize(originalBuffer.slice(0), options)
   }, [originalBuffer, options, optimize])
+
+  useEffect(() => {
+    if (optState.phase === 'done') setOptimizedOptions(pendingOptionsRef.current)
+  }, [optState.phase])
 
   // ── Download ─────────────────────────────────────────────────────────
   const handleDownload = useCallback(() => {
@@ -158,6 +224,10 @@ export default function App() {
     setBeforeMetrics(null)
     setFilename(null)
     setFileInputKey(k => k + 1)
+    setOptimizedOptions(null)
+    setWireframe(false)
+    setExpanded(false)
+    pendingOptionsRef.current = null
   }, [resetOpt])
 
   // ── Derived ───────────────────────────────────────────────────────────
@@ -169,6 +239,10 @@ export default function App() {
   const savings = beforeMetrics && afterMetrics && afterMetrics.fileSize > 0
     ? Math.round((1 - afterMetrics.fileSize / beforeMetrics.fileSize) * 100)
     : null
+
+  // Dirty = nessun risultato o opzioni cambiate dall'ultimo run → decide quale CTA è primaria
+  const isRunning = optState.phase === 'running'
+  const isDirty = !optimizedBuffer || JSON.stringify(options) !== JSON.stringify(optimizedOptions)
 
   return (
     <div className="ll-app">
@@ -258,10 +332,10 @@ export default function App() {
         {/* RESULT */}
         {view === 'result' && (
           <section className="ll-section ll-section--result">
-            <div className="ll-result-inner">
+            <div className={`ll-result-inner ${expanded ? 'll-result-inner--expanded' : ''}`}>
 
               <div className="ll-result-main">
-                <div className="ll-viewers-row">
+                <div className={`ll-viewers-row ${expanded ? 'll-viewers-row--expanded' : ''}`}>
 
                   <div className="ll-viewer-card">
                     <div className="ll-viewer-header">
@@ -273,7 +347,8 @@ export default function App() {
                     </div>
                     <div className="ll-viewer-canvas-wrap">
                       {!originalBuffer && <div className="ll-viewer-empty">Nessun modello</div>}
-                      <ViewerPanel buffer={originalBuffer} onCameraReady={handleBeforeCameraReady} />
+                      {originalBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
+                      <ViewerPanel buffer={originalBuffer} wireframe={wireframe} onCameraReady={handleBeforeCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size-group">
@@ -291,12 +366,14 @@ export default function App() {
                         <span className="ll-viewer-label">Ottimizzato</span>
                       </div>
                       <span className="ll-viewer-desc">
-                        {options.geometry.draco ? 'draco' : 'mesh'} · {options.texture.format}
+                        {options.geometry.draco ? 'draco' : options.geometry.meshopt ? 'meshopt' : 'mesh'}
+                        {options.texture.enabled ? ` · ${options.texture.format}` : ''}
                       </span>
                     </div>
                     <div className="ll-viewer-canvas-wrap">
                       {!optimizedBuffer && <div className="ll-viewer-empty">Da ottimizzare</div>}
-                      <ViewerPanel buffer={optimizedBuffer} onCameraReady={handleAfterCameraReady} />
+                      {optimizedBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
+                      <ViewerPanel buffer={optimizedBuffer} wireframe={wireframe} onCameraReady={handleAfterCameraReady} />
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size-group">
@@ -312,12 +389,15 @@ export default function App() {
 
                 </div>
 
-                <div className="ll-sync-hint">
-                  <span className="ll-sync-hint-icon">↔</span>
-                  Camere sincronizzate — trascina su un viewer per orbitare entrambi
+                <div className="ll-viewers-bar">
+                  <div className="ll-sync-hint">
+                    <span className="ll-sync-hint-icon">↔</span>
+                    Camere sincronizzate — trascina su un viewer per orbitare entrambi
+                  </div>
+                  <ExpandToggle active={expanded} onToggle={() => setExpanded(e => !e)} />
                 </div>
 
-                <MetricsTable before={beforeMetrics} after={afterMetrics} />
+                {!expanded && <MetricsTable before={beforeMetrics} after={afterMetrics} />}
               </div>
 
               <aside className="ll-sidebar">
@@ -327,7 +407,24 @@ export default function App() {
                 </div>
 
                 <div className="ll-sidebar-body">
-                  <OptimizeControls options={options} onChange={setOptions} disabled={optState.phase === 'running'} />
+                  <ProfileSelector profile={profile} onSelect={handleSelectProfile} disabled={isRunning} />
+
+                  <div className="ll-advanced">
+                    <button
+                      type="button"
+                      className="ll-advanced-head"
+                      onClick={() => setAdvancedOpen(o => !o)}
+                      aria-expanded={advancedOpen}
+                    >
+                      <span>Impostazioni Avanzate</span>
+                      <span className={`ll-advanced-caret ll-advanced-caret--${advancedOpen ? 'open' : 'closed'}`}>▾</span>
+                    </button>
+                    {advancedOpen && (
+                      <div className="ll-advanced-body">
+                        <OptimizeControls options={options} onChange={handleOptionsChange} disabled={isRunning} />
+                      </div>
+                    )}
+                  </div>
 
                   {optState.phase === 'error' && (
                     <div className="ll-error">❌ {optState.message}</div>
@@ -341,12 +438,18 @@ export default function App() {
                 </div>
 
                 <div className="ll-sidebar-foot">
-                  <button className="ll-btn ll-btn--secondary" onClick={handleOptimize}
-                    disabled={!originalBuffer || optState.phase === 'running'}>
+                  <button
+                    className={`ll-btn ${isDirty ? 'll-btn--primary' : 'll-btn--secondary'}`}
+                    onClick={handleOptimize}
+                    disabled={!originalBuffer || isRunning || !isDirty}
+                  >
                     <span className="ll-btn-icon">⟲</span> Ottimizza
                   </button>
-                  <button className="ll-btn ll-btn--primary" onClick={handleDownload}
-                    disabled={!optimizedBuffer}>
+                  <button
+                    className={`ll-btn ${!isDirty && optimizedBuffer ? 'll-btn--primary' : 'll-btn--secondary'}`}
+                    onClick={handleDownload}
+                    disabled={!optimizedBuffer || isDirty}
+                  >
                     <span>↓</span> Scarica GLB ottimizzato
                   </button>
                 </div>

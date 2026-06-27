@@ -1,7 +1,7 @@
-import { weld, dedup, prune, draco, simplify } from '@gltf-transform/functions'
+import { weld, dedup, prune, draco, simplify, meshopt } from '@gltf-transform/functions'
 import type { Document, WebIO } from '@gltf-transform/core'
 import type { GeometryOptions } from '../types/pipeline'
-import { MeshoptSimplifier } from 'meshoptimizer'
+import { MeshoptSimplifier, MeshoptEncoder } from 'meshoptimizer'
 
 /**
  * Carica un modulo Draco (encoder o decoder) via fetch + new Function.
@@ -77,6 +77,7 @@ export async function applyGeometryOps(
     await doc.transform(...transforms)
   }
 
+  // Draco e Meshopt comprimono entrambi la geometria: mutuamente esclusivi, Draco ha precedenza.
   if (options.draco) {
     onProgress('Draco: caricamento encoder e compressione geometria…')
 
@@ -87,5 +88,13 @@ export async function applyGeometryOps(
 
     // draco() non prende encoder come opzione — solo metodo e quantizzazione
     await doc.transform(draco())
+  } else if (options.meshopt) {
+    onProgress('Meshopt: compressione geometria (EXT_meshopt_compression)…')
+
+    // L'encoder va registrato sull'IO: EXTMeshoptCompression lo legge dalla dependency
+    // 'meshopt.encoder' durante io.writeBinary(). meshopt() riordina/quantizza i vertici.
+    await MeshoptEncoder.ready
+    io.registerDependencies({ 'meshopt.encoder': MeshoptEncoder })
+    await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }))
   }
 }

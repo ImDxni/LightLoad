@@ -4,6 +4,7 @@ import type { WorkerRequest, WorkerResponse, OptimizationOptions } from '../type
 import { extractMetrics, findNonPow4Textures } from '../lib/metricsExtractor'
 import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
+import { MeshoptDecoder } from 'meshoptimizer'
 
 function send(msg: WorkerResponse) { postMessage(msg) }
 function progress(message: string, percent: number) { send({ type: 'progress', message, percent }) }
@@ -180,6 +181,14 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
       io.registerDependencies({ 'draco3d.decoder': decoder })
     } catch {
       // Decoder non disponibile — fallisce solo su GLB già Draco-compressi
+    }
+
+    // Decoder Meshopt per leggere GLB già compressi con EXT_meshopt_compression
+    try {
+      await MeshoptDecoder.ready
+      io.registerDependencies({ 'meshopt.decoder': MeshoptDecoder })
+    } catch {
+      // Decoder non disponibile — fallisce solo su GLB già Meshopt-compressi
     }
 
     progress('Parsing GLB…', 8)
