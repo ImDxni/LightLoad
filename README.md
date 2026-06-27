@@ -4,7 +4,7 @@
 
 LightLoad compresses `.glb` files using Draco geometry compression and KTX2/Basis Universal texture encoding, with a side-by-side Babylon.js viewer to compare results before downloading.
 
-**[→ Live Demo](https://light-load-od4o980fa-imdxni.vercel.app/)**
+**[→ Live Demo](light-load.vercel.app)**
 
 ---
 
