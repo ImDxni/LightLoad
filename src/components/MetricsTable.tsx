@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { GLBMetrics } from '../types/pipeline'
 import { fmtSize } from '../lib/format'
 
@@ -18,6 +19,7 @@ function delta(before: number, after: number): { text: string; good: boolean } |
 }
 
 export function MetricsTable({ before, after }: Props) {
+  const { t } = useTranslation()
   if (!before) return null
 
   type Row = {
@@ -29,19 +31,19 @@ export function MetricsTable({ before, after }: Props) {
 
   const rows: Row[] = [
     {
-      label: 'Dimensione file',
+      label: t('metrics.fileSize'),
       bVal: fmtSize(before.fileSize),
       aVal: after ? fmtSize(after.fileSize) : '—',
       delta: after ? delta(before.fileSize, after.fileSize) : null,
     },
     {
-      label: 'Vertici',
+      label: t('metrics.vertices'),
       bVal: fmt(before.vertexCount),
       aVal: after ? fmt(after.vertexCount) : '—',
       delta: after ? delta(before.vertexCount, after.vertexCount) : null,
     },
     {
-      label: 'Triangoli',
+      label: t('metrics.triangles'),
       bVal: fmt(before.triangleCount),
       aVal: after ? fmt(after.triangleCount) : '—',
       delta: after ? delta(before.triangleCount, after.triangleCount) : null,
@@ -51,10 +53,10 @@ export function MetricsTable({ before, after }: Props) {
   return (
     <div className="ll-metrics">
       <div className="ll-metrics-head">
-        <span>Metrica</span>
-        <span>Originale</span>
-        <span>Ottimizzato</span>
-        <span>Variazione</span>
+        <span>{t('metrics.metric')}</span>
+        <span>{t('metrics.original')}</span>
+        <span>{t('metrics.optimized')}</span>
+        <span>{t('metrics.variation')}</span>
       </div>
       {rows.map((row, i) => (
         <div key={i} className="ll-metrics-row">

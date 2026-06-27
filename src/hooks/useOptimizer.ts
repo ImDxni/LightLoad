@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { OptimizationOptions, WorkerResponse, GLBMetrics } from '../types/pipeline'
 import OptimizerWorker from '../workers/optimizer.worker?worker'
+import i18n from '../i18n'
 
 export type OptimizationState =
   | { phase: 'idle' }
@@ -22,7 +23,7 @@ export function useOptimizer() {
 
       const warnings: string[] = []
 
-      setState({ phase: 'running', message: 'Inizializzazione…', percent: 0 })
+      setState({ phase: 'running', message: i18n.t('progress.init'), percent: 0 })
 
       worker.onmessage = (ev: MessageEvent<WorkerResponse>) => {
         const msg = ev.data
@@ -57,11 +58,11 @@ export function useOptimizer() {
       worker.onerror = (err) => {
         worker.terminate()
         workerRef.current = null
-        setState({ phase: 'error', message: err.message ?? 'Errore worker sconosciuto' })
+        setState({ phase: 'error', message: err.message ?? i18n.t('errors.unknownWorker') })
       }
 
       // Trasferisce il buffer al worker (zero-copy)
-      worker.postMessage({ type: 'optimize', buffer, options }, [buffer])
+      worker.postMessage({ type: 'optimize', buffer, options, lng: i18n.language }, [buffer])
     },
     [],
   )

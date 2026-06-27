@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
 import type { ArcRotateCamera } from '@babylonjs/core'
@@ -10,6 +11,7 @@ import { MetricsTable } from './components/MetricsTable'
 import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
 import { ProfileSelector } from './components/ProfileSelector'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
 import './App.css'
@@ -20,12 +22,13 @@ const DEFAULT_OPTIONS: OptimizationOptions = PROFILE_PRESETS.ecommerce
 type View = 'empty' | 'processing' | 'result'
 
 function WireframeToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       className={`ll-wire-btn ll-wire-btn--${active ? 'on' : 'off'}`}
       onClick={onToggle}
-      title={active ? 'Disattiva wireframe' : 'Attiva wireframe'}
+      title={active ? t('viewer.wireframeOff') : t('viewer.wireframeOn')}
       aria-pressed={active}
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -38,25 +41,27 @@ function WireframeToggle({ active, onToggle }: { active: boolean; onToggle: () =
 
 // Focus mode: ingrandisce i canvas e nasconde la sidebar
 function ExpandToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       className={`ll-expand-btn ll-expand-btn--${active ? 'on' : 'off'}`}
       onClick={onToggle}
       aria-pressed={active}
-      title={active ? 'Riduci i viewer' : 'Espandi i viewer'}
+      title={active ? t('viewer.reduceTitle') : t('viewer.expandTitle')}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         {active
           ? <path d="M9 4v5H4 M20 9h-5V4 M15 20v-5h5 M4 15h5v5" />
           : <path d="M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5" />}
       </svg>
-      {active ? 'Riduci' : 'Espandi'}
+      {active ? t('viewer.reduce') : t('viewer.expand')}
     </button>
   )
 }
 
 export default function App() {
+  const { t, i18n } = useTranslation()
   const [filename, setFilename] = useState<string | null>(null)
   const [originalBuffer, setOriginalBuffer] = useState<ArrayBuffer | null>(null)
   const [beforeMetrics, setBeforeMetrics] = useState<GLBMetrics | null>(null)
@@ -78,6 +83,13 @@ export default function App() {
       .then(d => { if (typeof d.stargazers_count === 'number') setStars(d.stargazers_count) })
       .catch(() => {})
   }, [])
+
+  // Allinea <title>, <html lang> e meta description alla lingua attiva
+  useEffect(() => {
+    document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language
+    document.title = t('app.title')
+    document.querySelector('meta[name="description"]')?.setAttribute('content', t('app.metaDescription'))
+  }, [t, i18n.resolvedLanguage, i18n.language])
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
 
@@ -151,31 +163,31 @@ export default function App() {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError('Solo file .glb sono supportati.'); return }
+    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError(t('drop.errorGlbOnly')); return }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const buf = ev.target?.result as ArrayBuffer
-      if (!buf || buf.byteLength < 12) { setDropError('File non valido.'); return }
+      if (!buf || buf.byteLength < 12) { setDropError(t('drop.errorInvalid')); return }
       const magic = new DataView(buf).getUint32(0, true)
-      if (magic !== 0x46546c67) { setDropError('Non è un GLB valido.'); return }
+      if (magic !== 0x46546c67) { setDropError(t('drop.errorNotGlb')); return }
       loadFile(buf, file.name)
     }
     reader.readAsArrayBuffer(file)
-  }, [loadFile])
+  }, [loadFile, t])
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError('Solo file .glb sono supportati.'); return }
+    if (!file.name.toLowerCase().endsWith('.glb')) { setDropError(t('drop.errorGlbOnly')); return }
     const reader = new FileReader()
     reader.onload = (ev) => {
       const buf = ev.target?.result as ArrayBuffer
-      if (!buf || buf.byteLength < 12) { setDropError('File non valido.'); return }
+      if (!buf || buf.byteLength < 12) { setDropError(t('drop.errorInvalid')); return }
       loadFile(buf, file.name)
       setFileInputKey(k => k + 1)
     }
     reader.readAsArrayBuffer(file)
-  }, [loadFile])
+  }, [loadFile, t])
 
   // ── Profili / opzioni ───────────────────────────────────────────────
   const handleSelectProfile = useCallback((p: Profile) => {
@@ -253,7 +265,7 @@ export default function App() {
           <div className="ll-logo">
             <img src="/favicon.svg" className="ll-logo-icon" width={22} height={22} alt="Lightload" />
             <span className="ll-logo-name">Lightload</span>
-            <span className="ll-beta">BETA</span>
+            <span className="ll-beta">{t('app.beta')}</span>
           </div>
 
           {filename && view !== 'empty' && (
@@ -261,16 +273,19 @@ export default function App() {
               <span className="ll-file-chip-dot" />
               <span className="ll-file-chip-name">{filename}</span>
               <span className="ll-file-chip-size">{beforeSize}</span>
-              <span className="ll-file-chip-close" onClick={handleReset}>✕</span>
+              <span className="ll-file-chip-close" onClick={handleReset} title={t('header.removeFile')}>✕</span>
             </div>
           )}
         </div>
 
-        <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
-          <span className="ll-github-stars">★ {stars ?? '—'}</span>
-          <span>GitHub</span>
-          <span className="ll-github-arrow">↗</span>
-        </a>
+        <div className="ll-header-right">
+          <LanguageSwitcher />
+          <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
+            <span className="ll-github-stars">★ {stars ?? '—'}</span>
+            <span>{t('header.github')}</span>
+            <span className="ll-github-arrow">↗</span>
+          </a>
+        </div>
       </header>
 
       {/* ── MAIN ── */}
@@ -294,12 +309,12 @@ export default function App() {
                 <div className="ll-drop-icon-main">↓</div>
               </div>
               <div className="ll-drop-title">
-                <h2>Trascina qui un file .glb</h2>
-                <p>oppure <span>clicca per selezionare</span></p>
+                <h2>{t('drop.title')}</h2>
+                <p>{t('drop.or')} <span>{t('drop.clickToSelect')}</span></p>
               </div>
               <div className="ll-drop-privacy">
                 <span className="ll-drop-privacy-dot" />
-                Tutto avviene nel tuo browser · nessun upload
+                {t('drop.privacy')}
               </div>
               {dropError && <p className="ll-drop-error">{dropError}</p>}
             </div>
@@ -313,7 +328,7 @@ export default function App() {
               <div className="ll-proc-top">
                 <div className="ll-spinner" />
                 <div className="ll-proc-info">
-                  <div className="ll-proc-info-title">Ottimizzazione in corso</div>
+                  <div className="ll-proc-info-title">{t('processing.title')}</div>
                   <div className="ll-proc-info-file">{filename}</div>
                 </div>
                 <div className="ll-proc-pct">{Math.round(progress)}%</div>
@@ -341,12 +356,12 @@ export default function App() {
                     <div className="ll-viewer-header">
                       <div className="ll-viewer-header-left">
                         <span className="ll-viewer-dot" style={{ background: '#6b6b73' }} />
-                        <span className="ll-viewer-label">Originale</span>
+                        <span className="ll-viewer-label">{t('viewer.original')}</span>
                       </div>
-                      <span className="ll-viewer-desc">high-poly · raw</span>
+                      <span className="ll-viewer-desc">{t('viewer.originalDesc')}</span>
                     </div>
                     <div className="ll-viewer-canvas-wrap">
-                      {!originalBuffer && <div className="ll-viewer-empty">Nessun modello</div>}
+                      {!originalBuffer && <div className="ll-viewer-empty">{t('viewer.noModel')}</div>}
                       {originalBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
                       <ViewerPanel buffer={originalBuffer} wireframe={wireframe} onCameraReady={handleBeforeCameraReady} />
                     </div>
@@ -355,7 +370,7 @@ export default function App() {
                         <span className="ll-viewer-size">{beforeSize}</span>
                         <VramBadge vram={beforeMetrics?.vram} />
                       </span>
-                      <span className="ll-viewer-badge ll-viewer-badge--neutral">Non ottimizzato</span>
+                      <span className="ll-viewer-badge ll-viewer-badge--neutral">{t('viewer.notOptimized')}</span>
                     </div>
                   </div>
 
@@ -363,7 +378,7 @@ export default function App() {
                     <div className="ll-viewer-header">
                       <div className="ll-viewer-header-left">
                         <span className="ll-viewer-dot" style={{ background: '#7c5cff' }} />
-                        <span className="ll-viewer-label">Ottimizzato</span>
+                        <span className="ll-viewer-label">{t('viewer.optimized')}</span>
                       </div>
                       <span className="ll-viewer-desc">
                         {options.geometry.draco ? 'draco' : options.geometry.meshopt ? 'meshopt' : 'mesh'}
@@ -371,7 +386,7 @@ export default function App() {
                       </span>
                     </div>
                     <div className="ll-viewer-canvas-wrap">
-                      {!optimizedBuffer && <div className="ll-viewer-empty">Da ottimizzare</div>}
+                      {!optimizedBuffer && <div className="ll-viewer-empty">{t('viewer.toOptimize')}</div>}
                       {optimizedBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
                       <ViewerPanel buffer={optimizedBuffer} wireframe={wireframe} onCameraReady={handleAfterCameraReady} />
                     </div>
@@ -392,7 +407,7 @@ export default function App() {
                 <div className="ll-viewers-bar">
                   <div className="ll-sync-hint">
                     <span className="ll-sync-hint-icon">↔</span>
-                    Camere sincronizzate — trascina su un viewer per orbitare entrambi
+                    {t('viewer.syncHint')}
                   </div>
                   <ExpandToggle active={expanded} onToggle={() => setExpanded(e => !e)} />
                 </div>
@@ -402,8 +417,8 @@ export default function App() {
 
               <aside className="ll-sidebar">
                 <div className="ll-sidebar-head">
-                  <div className="ll-sidebar-head-title">Ottimizzazione</div>
-                  <div className="ll-sidebar-head-sub">Compressione geometria &amp; texture</div>
+                  <div className="ll-sidebar-head-title">{t('sidebar.title')}</div>
+                  <div className="ll-sidebar-head-sub">{t('sidebar.subtitle')}</div>
                 </div>
 
                 <div className="ll-sidebar-body">
@@ -416,7 +431,7 @@ export default function App() {
                       onClick={() => setAdvancedOpen(o => !o)}
                       aria-expanded={advancedOpen}
                     >
-                      <span>Impostazioni Avanzate</span>
+                      <span>{t('sidebar.advanced')}</span>
                       <span className={`ll-advanced-caret ll-advanced-caret--${advancedOpen ? 'open' : 'closed'}`}>▾</span>
                     </button>
                     {advancedOpen && (
@@ -443,14 +458,14 @@ export default function App() {
                     onClick={handleOptimize}
                     disabled={!originalBuffer || isRunning || !isDirty}
                   >
-                    <span className="ll-btn-icon">⟲</span> Ottimizza
+                    <span className="ll-btn-icon">⟲</span> {t('sidebar.optimize')}
                   </button>
                   <button
                     className={`ll-btn ${!isDirty && optimizedBuffer ? 'll-btn--primary' : 'll-btn--secondary'}`}
                     onClick={handleDownload}
                     disabled={!optimizedBuffer || isDirty}
                   >
-                    <span>↓</span> Scarica GLB ottimizzato
+                    <span>↓</span> {t('sidebar.download')}
                   </button>
                 </div>
               </aside>

@@ -46,7 +46,7 @@ export interface GLBMetrics {
 
 /** Messaggi inviati dalla UI al worker */
 export type WorkerRequest =
-  | { type: 'optimize'; buffer: ArrayBuffer; options: OptimizationOptions }
+  | { type: 'optimize'; buffer: ArrayBuffer; options: OptimizationOptions; lng: string }
 
 /** Messaggi inviati dal worker alla UI */
 export type WorkerResponse =

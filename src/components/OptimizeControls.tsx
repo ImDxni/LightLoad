@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { OptimizationOptions } from '../types/pipeline'
 
 interface Props {
@@ -29,6 +30,7 @@ function Toggle({
 }
 
 export function OptimizeControls({ options, onChange, disabled }: Props) {
+  const { t } = useTranslation()
   function setGeo<K extends keyof typeof options.geometry>(key: K, val: typeof options.geometry[K]) {
     onChange({ ...options, geometry: { ...options.geometry, [key]: val } })
   }
@@ -43,21 +45,21 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
     <>
       {/* Geometria */}
       <div>
-        <div className="ll-section-label">Geometria</div>
-        <Toggle name="Weld"  desc="Salda i vertici coincidenti"    on={weld}  onToggle={() => setGeo('weld', !weld)}   disabled={disabled} />
-        <Toggle name="Dedup" desc="Rimuove accessor duplicati"      on={dedup} onToggle={() => setGeo('dedup', !dedup)} disabled={disabled} />
-        <Toggle name="Prune" desc="Elimina nodi inutilizzati"       on={prune} onToggle={() => setGeo('prune', !prune)} disabled={disabled} />
-        <Toggle name="Draco" desc="Compressione mesh Draco"         on={draco}
+        <div className="ll-section-label">{t('controls.geometry')}</div>
+        <Toggle name={t('controls.weld')}  desc={t('controls.weldDesc')}    on={weld}  onToggle={() => setGeo('weld', !weld)}   disabled={disabled} />
+        <Toggle name={t('controls.dedup')} desc={t('controls.dedupDesc')}    on={dedup} onToggle={() => setGeo('dedup', !dedup)} disabled={disabled} />
+        <Toggle name={t('controls.prune')} desc={t('controls.pruneDesc')}    on={prune} onToggle={() => setGeo('prune', !prune)} disabled={disabled} />
+        <Toggle name={t('controls.draco')} desc={t('controls.dracoDesc')}    on={draco}
           onToggle={() => onChange({ ...options, geometry: { ...options.geometry, draco: !draco, meshopt: false } })}
           disabled={disabled} />
-        <Toggle name="Meshopt" desc="Compressione EXT_meshopt"      on={meshopt}
+        <Toggle name={t('controls.meshopt')} desc={t('controls.meshoptDesc')} on={meshopt}
           onToggle={() => onChange({ ...options, geometry: { ...options.geometry, meshopt: !meshopt, draco: false } })}
           disabled={disabled} />
-        <Toggle name="Simplify" desc="Semplificazione geometria"   on={simplify} onToggle={() => setGeo('simplify', !simplify)} disabled={disabled} />
+        <Toggle name={t('controls.simplify')} desc={t('controls.simplifyDesc')} on={simplify} onToggle={() => setGeo('simplify', !simplify)} disabled={disabled} />
         {simplify && (
           <>
             <div className="ll-quality-row">
-              <span className="ll-quality-label">Rapporto</span>
+              <span className="ll-quality-label">{t('controls.ratio')}</span>
               <span className="ll-quality-val">{simplifyRatio ?? 0.5}</span>
             </div>
             <input
@@ -70,7 +72,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
               onChange={(e) => setGeo('simplifyRatio', Number(e.target.value))}
             />
             <div className="ll-quality-row">
-              <span className="ll-quality-label">Errore</span>
+              <span className="ll-quality-label">{t('controls.error')}</span>
               <span className="ll-quality-val">{simplifyError ?? 0.05}</span>
             </div>
             <input
@@ -90,10 +92,10 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
 
       {/* Texture */}
       <div>
-        <div className="ll-section-label">Texture</div>
+        <div className="ll-section-label">{t('controls.texture')}</div>
         <Toggle
-          name="KTX2 / Basis Universal"
-          desc="Richiede libktx.wasm in /wasm/"
+          name={t('controls.ktx2')}
+          desc={t('controls.ktx2Desc')}
           on={enabled}
           onToggle={() => setTex('enabled', !enabled)}
           disabled={disabled}
@@ -101,7 +103,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
 
         {enabled && (
           <>
-            <div style={{ fontSize: 12, color: '#8a8a95', margin: '9px 0 0' }}>Codec di compressione</div>
+            <div style={{ fontSize: 12, color: '#8a8a95', margin: '9px 0 0' }}>{t('controls.codec')}</div>
             <div className="ll-seg">
               <div
                 className={`ll-seg-opt ll-seg-opt--${format === 'etc1s' ? 'active' : 'inactive'}`}
@@ -118,7 +120,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
             </div>
 
             <div className="ll-quality-row">
-              <span className="ll-quality-label">Qualità</span>
+              <span className="ll-quality-label">{t('controls.quality')}</span>
               <span className="ll-quality-val">{quality}</span>
             </div>
             <input
@@ -133,9 +135,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
             {/* Warning texture non multiple di 4 — statica per ora */}
             <div className="ll-warn">
               <span className="ll-warn-icon">⚠</span>
-              <div className="ll-warn-text">
-                Le texture con dimensioni non multiple di 4 px verranno segnalate nella console.
-              </div>
+              <div className="ll-warn-text">{t('controls.texWarn')}</div>
             </div>
           </>
         )}

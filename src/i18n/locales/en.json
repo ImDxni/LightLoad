@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "Lightload — GLB Optimizer",
+    "metaDescription": "Client-side GLB optimizer: Draco geometry + KTX2 textures in your browser",
+    "beta": "BETA"
+  },
+  "header": {
+    "github": "GitHub",
+    "removeFile": "Remove file"
+  },
+  "drop": {
+    "title": "Drop a .glb file here",
+    "or": "or",
+    "clickToSelect": "click to select",
+    "privacy": "Everything runs in your browser · no upload",
+    "errorGlbOnly": "Only .glb files are supported.",
+    "errorInvalid": "Invalid file.",
+    "errorNotGlb": "Not a valid GLB."
+  },
+  "processing": {
+    "title": "Optimizing"
+  },
+  "viewer": {
+    "original": "Original",
+    "optimized": "Optimized",
+    "originalDesc": "high-poly · raw",
+    "noModel": "No model",
+    "toOptimize": "To optimize",
+    "notOptimized": "Not optimized",
+    "wireframeOn": "Enable wireframe",
+    "wireframeOff": "Disable wireframe",
+    "expand": "Expand",
+    "reduce": "Collapse",
+    "expandTitle": "Expand the viewers",
+    "reduceTitle": "Collapse the viewers",
+    "syncHint": "Cameras synced — drag on a viewer to orbit both"
+  },
+  "sidebar": {
+    "title": "Optimization",
+    "subtitle": "Geometry & texture compression",
+    "optimize": "Optimize",
+    "download": "Download optimized GLB",
+    "advanced": "Advanced Settings"
+  },
+  "profiles": {
+    "label": "Profiles",
+    "ecommerce": { "name": "E-commerce", "desc": "Max compression · Draco + ETC1S" },
+    "ar": { "name": "AR / Meta", "desc": "High quality · Meshopt + UASTC" },
+    "custom": { "name": "Custom", "desc": "Configure manually" }
+  },
+  "controls": {
+    "geometry": "Geometry",
+    "texture": "Textures",
+    "weld": "Weld",
+    "weldDesc": "Welds coincident vertices",
+    "dedup": "Dedup",
+    "dedupDesc": "Removes duplicate accessors",
+    "prune": "Prune",
+    "pruneDesc": "Removes unused nodes",
+    "draco": "Draco",
+    "dracoDesc": "Draco mesh compression",
+    "meshopt": "Meshopt",
+    "meshoptDesc": "EXT_meshopt compression",
+    "simplify": "Simplify",
+    "simplifyDesc": "Geometry simplification",
+    "ratio": "Ratio",
+    "error": "Error",
+    "ktx2": "KTX2 / Basis Universal",
+    "ktx2Desc": "Requires libktx.wasm in /wasm/",
+    "codec": "Compression codec",
+    "quality": "Quality",
+    "texWarn": "Textures with dimensions not multiple of 4 px will be reported in the console."
+  },
+  "metrics": {
+    "metric": "Metric",
+    "original": "Original",
+    "optimized": "Optimized",
+    "variation": "Change",
+    "fileSize": "File size",
+    "vertices": "Vertices",
+    "triangles": "Triangles"
+  },
+  "vram": {
+    "label": "VRAM",
+    "ariaDetail": "VRAM detail",
+    "geometry": "Geometry",
+    "textures": "Textures",
+    "total": "Total"
+  },
+  "progress": {
+    "init": "Initializing…",
+    "parsing": "Parsing GLB…",
+    "geometry": "Geometry…",
+    "weld": "Weld: merging duplicate vertices…",
+    "dedup": "Dedup: removing duplicate accessors…",
+    "prune": "Prune: removing unused nodes/materials…",
+    "simplify": "Simplify: simplifying geometry…",
+    "draco": "Draco: loading encoder and compressing geometry…",
+    "meshopt": "Meshopt: compressing geometry (EXT_meshopt_compression)…",
+    "ktxLoad": "Textures: loading libktx.wasm…",
+    "texture": "Texture {{i}}/{{total}}: \"{{name}}\" ({{format}})…",
+    "writing": "Writing GLB…",
+    "done": "Done!"
+  },
+  "warnings": {
+    "ktxSkipped": "KTX2 compression skipped: {{error}}",
+    "nonPow4": "Textures not multiple of 4 px (possible KTX2 artifacts): {{list}}",
+    "webcodecs": "WebCodecs decoding unavailable for \"{{name}}\": textures with transparency may show artifacts.",
+    "decodeFailed": "Texture \"{{name}}\": decoding failed, skipped ({{error}})",
+    "encodeFailed": "Texture \"{{name}}\": KTX2 encoding failed, skipped ({{error}})"
+  },
+  "errors": {
+    "invalidGlb": "Invalid or corrupted GLB: {{error}}",
+    "unknownWorker": "Unknown worker error",
+    "ktxNotFound": "libktx.js not found in /wasm/. Run \"npm run setup:wasm\".",
+    "ktxFactory": "createKtxModule not found in libktx.js"
+  },
+  "language": {
+    "select": "Language",
+    "it": "Italiano",
+    "en": "English"
+  }
+}

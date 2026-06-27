@@ -5,6 +5,7 @@ import { extractMetrics, findNonPow4Textures } from '../lib/metricsExtractor'
 import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
 import { MeshoptDecoder } from 'meshoptimizer'
+import { t, setWorkerLang } from '../i18n/worker'
 
 function send(msg: WorkerResponse) { postMessage(msg) }
 function progress(message: string, percent: number) { send({ type: 'progress', message, percent }) }
@@ -95,11 +96,11 @@ async function decodeViaCanvas(
 async function compressTextures(doc: Document, options: OptimizationOptions): Promise<void> {
   if (!options.texture.enabled) return
 
-  progress('Texture: caricamento libktx.wasm…', 58)
+  progress(t('progress.ktxLoad'), 58)
   try {
     await loadKtxModule()
   } catch (e: unknown) {
-    warn(`Compressione KTX2 saltata: ${e instanceof Error ? e.message : String(e)}`)
+    warn(t('warnings.ktxSkipped', { error: e instanceof Error ? e.message : String(e) }))
     return
   }
 
@@ -109,7 +110,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
   const metrics = extractMetrics(doc, 0)
   const badTextures = findNonPow4Textures(metrics.textures)
   if (badTextures.length > 0) {
-    warn(`Texture non multipli di 4 px (possibili artefatti KTX2): ${badTextures.join(', ')}`)
+    warn(t('warnings.nonPow4', { list: badTextures.join(', ') }))
   }
 
   doc.createExtension(KHRTextureBasisu).setRequired(true)
@@ -118,7 +119,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
     const tex = textures[i]
     const name = tex.getName() || `texture_${i}`
     progress(
-      `Texture ${i + 1}/${textures.length}: "${name}" (${options.texture.format.toUpperCase()})…`,
+      t('progress.texture', { i: i + 1, total: textures.length, name, format: options.texture.format.toUpperCase() }),
       60 + Math.round((30 * i) / textures.length),
     )
 
@@ -132,9 +133,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
         try {
           imageData = await decodeTextureToRGBA(image, mimeType)
         } catch {
-          warn(
-            `Decodifica WebCodecs non disponibile per "${name}": le texture con trasparenza potrebbero presentare artefatti.`,
-          )
+          warn(t('warnings.webcodecs', { name }))
           imageData = await decodeViaCanvas(image, mimeType)
         }
       } else {
@@ -144,7 +143,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
         imageData = await decodeViaCanvas(image, mimeType)
       }
     } catch (e) {
-      warn(`Texture "${name}": decodifica fallita, saltata (${e})`)
+      warn(t('warnings.decodeFailed', { name, error: String(e) }))
       continue
     }
 
@@ -152,7 +151,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
     try {
       ktx2Data = await encodeTextureToKTX2(imageData, options.texture.format, options.texture.quality)
     } catch (e) {
-      warn(`Texture "${name}": encoding KTX2 fallito, saltata (${e})`)
+      warn(t('warnings.encodeFailed', { name, error: String(e) }))
       continue
     }
 
@@ -166,10 +165,11 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
 self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   if (ev.data.type !== 'optimize') return
 
-  const { buffer, options } = ev.data
+  const { buffer, options, lng } = ev.data
+  setWorkerLang(lng)
 
   try {
-    progress('Inizializzazione…', 3)
+    progress(t('progress.init'), 3)
 
     // Crea il WebIO e registra tutte le estensioni
     const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -191,26 +191,26 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
       // Decoder non disponibile — fallisce solo su GLB già Meshopt-compressi
     }
 
-    progress('Parsing GLB…', 8)
+    progress(t('progress.parsing'), 8)
     let doc: Document
     try {
       doc = await io.readBinary(new Uint8Array(buffer))
     } catch (e) {
-      send({ type: 'error', message: `GLB non valido o corrotto: ${e}` })
+      send({ type: 'error', message: t('errors.invalidGlb', { error: String(e) }) })
       return
     }
 
-    progress('Geometria…', 15)
+    progress(t('progress.geometry'), 15)
     // Passa io ad applyGeometryOps — registra l'encoder Draco sull'IO se necessario
     await applyGeometryOps(doc, options.geometry, io, (msg) => progress(msg, 40))
 
     await compressTextures(doc, options)
 
-    progress('Scrittura GLB…', 92)
+    progress(t('progress.writing'), 92)
     const outBuffer = await io.writeBinary(doc)
     const afterMetrics = extractMetrics(doc, outBuffer.byteLength, options.texture.format)
 
-    progress('Completato!', 100)
+    progress(t('progress.done'), 100)
     send({ type: 'success', buffer: outBuffer.buffer, metrics: afterMetrics })
   } catch (err: unknown) {
     send({ type: 'error', message: err instanceof Error ? err.message : String(err) })

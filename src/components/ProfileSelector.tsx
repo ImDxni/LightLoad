@@ -1,10 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import type { Profile } from '../lib/profiles'
 
-const ITEMS: { id: Profile; name: string; desc: string }[] = [
-  { id: 'ecommerce', name: 'E-commerce', desc: 'Max compressione · Draco + ETC1S' },
-  { id: 'ar',        name: 'AR / Meta',  desc: 'Alta qualità · Meshopt + UASTC' },
-  { id: 'custom',    name: 'Custom',     desc: 'Configura manualmente' },
-]
+const PROFILE_IDS: Profile[] = ['ecommerce', 'ar', 'custom']
 
 interface Props {
   profile: Profile
@@ -13,20 +10,21 @@ interface Props {
 }
 
 export function ProfileSelector({ profile, onSelect, disabled }: Props) {
+  const { t } = useTranslation()
   return (
     <div>
-      <div className="ll-section-label">Profili</div>
+      <div className="ll-section-label">{t('profiles.label')}</div>
       <div className="ll-profiles">
-        {ITEMS.map(it => (
+        {PROFILE_IDS.map(id => (
           <button
-            key={it.id}
+            key={id}
             type="button"
-            className={`ll-profile ll-profile--${profile === it.id ? 'active' : 'inactive'}`}
-            onClick={disabled ? undefined : () => onSelect(it.id)}
+            className={`ll-profile ll-profile--${profile === id ? 'active' : 'inactive'}`}
+            onClick={disabled ? undefined : () => onSelect(id)}
             disabled={disabled}
           >
-            <span className="ll-profile-name">{it.name}</span>
-            <span className="ll-profile-desc">{it.desc}</span>
+            <span className="ll-profile-name">{t(`profiles.${id}.name`)}</span>
+            <span className="ll-profile-desc">{t(`profiles.${id}.desc`)}</span>
           </button>
         ))}
       </div>

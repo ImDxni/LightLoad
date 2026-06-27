@@ -7,6 +7,7 @@
  *  - I metodi dell'istanza texture: setImageFromMemory, compressBasis, writeToMemory
  *  - basisParams: struct Embind con campi uastc, qualityLevel, threadCount, compressionLevel
  */
+import { t } from '../i18n/worker'
 
 interface KtxCreateInfoInstance {
   glInternalformat: number
@@ -77,13 +78,13 @@ export async function loadKtxModule(): Promise<KtxModule> {
   if (cachedModule) return cachedModule
 
   const res = await fetch('/wasm/libktx.js')
-  if (!res.ok) throw new Error('libktx.js non trovato in /wasm/. Esegui "npm run setup:wasm".')
+  if (!res.ok) throw new Error(t('errors.ktxNotFound'))
 
   const mod = { exports: {} as Record<string, unknown> }
   new Function('module', 'exports', await res.text())(mod, mod.exports)
 
   const factory = mod.exports as unknown as KtxFactory
-  if (typeof factory !== 'function') throw new Error('createKtxModule non trovato in libktx.js')
+  if (typeof factory !== 'function') throw new Error(t('errors.ktxFactory'))
 
   cachedModule = await factory({ locateFile: (f) => `/wasm/${f}` })
   return cachedModule

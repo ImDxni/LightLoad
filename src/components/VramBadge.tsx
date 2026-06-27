@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { VramBreakdown } from '../types/pipeline'
 import { fmtSize } from '../lib/format'
 
@@ -11,22 +12,23 @@ interface Props {
  * sulla dipendenza dal device.
  */
 export function VramBadge({ vram }: Props) {
+  const { t } = useTranslation()
   if (!vram || vram.total <= 0) return null
 
   return (
     <span className="ll-vram">
-      ({fmtSize(vram.total)} VRAM
-      <span className="ll-vram-info" tabIndex={0} aria-label="Dettaglio VRAM">
+      ({fmtSize(vram.total)} {t('vram.label')}
+      <span className="ll-vram-info" tabIndex={0} aria-label={t('vram.ariaDetail')}>
         <span className="ll-vram-info-icon" aria-hidden="true">i</span>
         <span className="ll-vram-tip" role="tooltip">
           <span className="ll-vram-tip-row">
-            <span>Geometria</span><span>{fmtSize(vram.geometry)}</span>
+            <span>{t('vram.geometry')}</span><span>{fmtSize(vram.geometry)}</span>
           </span>
           <span className="ll-vram-tip-row">
-            <span>Texture</span><span>{fmtSize(vram.textures)}</span>
+            <span>{t('vram.textures')}</span><span>{fmtSize(vram.textures)}</span>
           </span>
           <span className="ll-vram-tip-row ll-vram-tip-row--total">
-            <span>Totale</span><span>{fmtSize(vram.total)}</span>
+            <span>{t('vram.total')}</span><span>{fmtSize(vram.total)}</span>
           </span>
         </span>
       </span>

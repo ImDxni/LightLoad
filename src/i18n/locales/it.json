@@ -1,0 +1,123 @@
+{
+  "app": {
+    "title": "Lightload — GLB Optimizer",
+    "metaDescription": "Ottimizzatore GLB client-side: geometria Draco + texture KTX2 nel browser",
+    "beta": "BETA"
+  },
+  "header": {
+    "github": "GitHub",
+    "removeFile": "Rimuovi file"
+  },
+  "drop": {
+    "title": "Trascina qui un file .glb",
+    "or": "oppure",
+    "clickToSelect": "clicca per selezionare",
+    "privacy": "Tutto avviene nel tuo browser · nessun upload",
+    "errorGlbOnly": "Solo file .glb sono supportati.",
+    "errorInvalid": "File non valido.",
+    "errorNotGlb": "Non è un GLB valido."
+  },
+  "processing": {
+    "title": "Ottimizzazione in corso"
+  },
+  "viewer": {
+    "original": "Originale",
+    "optimized": "Ottimizzato",
+    "originalDesc": "high-poly · raw",
+    "noModel": "Nessun modello",
+    "toOptimize": "Da ottimizzare",
+    "notOptimized": "Non ottimizzato",
+    "wireframeOn": "Attiva wireframe",
+    "wireframeOff": "Disattiva wireframe",
+    "expand": "Espandi",
+    "reduce": "Riduci",
+    "expandTitle": "Espandi i viewer",
+    "reduceTitle": "Riduci i viewer",
+    "syncHint": "Camere sincronizzate — trascina su un viewer per orbitare entrambi"
+  },
+  "sidebar": {
+    "title": "Ottimizzazione",
+    "subtitle": "Compressione geometria & texture",
+    "optimize": "Ottimizza",
+    "download": "Scarica GLB ottimizzato",
+    "advanced": "Impostazioni Avanzate"
+  },
+  "profiles": {
+    "label": "Profili",
+    "ecommerce": { "name": "E-commerce", "desc": "Max compressione · Draco + ETC1S" },
+    "ar": { "name": "AR / Meta", "desc": "Alta qualità · Meshopt + UASTC" },
+    "custom": { "name": "Custom", "desc": "Configura manualmente" }
+  },
+  "controls": {
+    "geometry": "Geometria",
+    "texture": "Texture",
+    "weld": "Weld",
+    "weldDesc": "Salda i vertici coincidenti",
+    "dedup": "Dedup",
+    "dedupDesc": "Rimuove accessor duplicati",
+    "prune": "Prune",
+    "pruneDesc": "Elimina nodi inutilizzati",
+    "draco": "Draco",
+    "dracoDesc": "Compressione mesh Draco",
+    "meshopt": "Meshopt",
+    "meshoptDesc": "Compressione EXT_meshopt",
+    "simplify": "Simplify",
+    "simplifyDesc": "Semplificazione geometria",
+    "ratio": "Rapporto",
+    "error": "Errore",
+    "ktx2": "KTX2 / Basis Universal",
+    "ktx2Desc": "Richiede libktx.wasm in /wasm/",
+    "codec": "Codec di compressione",
+    "quality": "Qualità",
+    "texWarn": "Le texture con dimensioni non multiple di 4 px verranno segnalate nella console."
+  },
+  "metrics": {
+    "metric": "Metrica",
+    "original": "Originale",
+    "optimized": "Ottimizzato",
+    "variation": "Variazione",
+    "fileSize": "Dimensione file",
+    "vertices": "Vertici",
+    "triangles": "Triangoli"
+  },
+  "vram": {
+    "label": "VRAM",
+    "ariaDetail": "Dettaglio VRAM",
+    "geometry": "Geometria",
+    "textures": "Texture",
+    "total": "Totale"
+  },
+  "progress": {
+    "init": "Inizializzazione…",
+    "parsing": "Parsing GLB…",
+    "geometry": "Geometria…",
+    "weld": "Weld: fusione vertici duplicati…",
+    "dedup": "Dedup: rimozione accessor duplicati…",
+    "prune": "Prune: eliminazione nodi/materiali inutilizzati…",
+    "simplify": "Simplify: semplificazione geometria…",
+    "draco": "Draco: caricamento encoder e compressione geometria…",
+    "meshopt": "Meshopt: compressione geometria (EXT_meshopt_compression)…",
+    "ktxLoad": "Texture: caricamento libktx.wasm…",
+    "texture": "Texture {{i}}/{{total}}: \"{{name}}\" ({{format}})…",
+    "writing": "Scrittura GLB…",
+    "done": "Completato!"
+  },
+  "warnings": {
+    "ktxSkipped": "Compressione KTX2 saltata: {{error}}",
+    "nonPow4": "Texture non multipli di 4 px (possibili artefatti KTX2): {{list}}",
+    "webcodecs": "Decodifica WebCodecs non disponibile per \"{{name}}\": le texture con trasparenza potrebbero presentare artefatti.",
+    "decodeFailed": "Texture \"{{name}}\": decodifica fallita, saltata ({{error}})",
+    "encodeFailed": "Texture \"{{name}}\": encoding KTX2 fallito, saltata ({{error}})"
+  },
+  "errors": {
+    "invalidGlb": "GLB non valido o corrotto: {{error}}",
+    "unknownWorker": "Errore worker sconosciuto",
+    "ktxNotFound": "libktx.js non trovato in /wasm/. Esegui \"npm run setup:wasm\".",
+    "ktxFactory": "createKtxModule non trovato in libktx.js"
+  },
+  "language": {
+    "select": "Lingua",
+    "it": "Italiano",
+    "en": "English"
+  }
+}

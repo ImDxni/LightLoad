@@ -2,6 +2,7 @@ import { weld, dedup, prune, draco, simplify, meshopt } from '@gltf-transform/fu
 import type { Document, WebIO } from '@gltf-transform/core'
 import type { GeometryOptions } from '../types/pipeline'
 import { MeshoptSimplifier, MeshoptEncoder } from 'meshoptimizer'
+import { t } from '../i18n/worker'
 
 /**
  * Carica un modulo Draco (encoder o decoder) via fetch + new Function.
@@ -51,20 +52,20 @@ export async function applyGeometryOps(
   const transforms = []
 
   if (options.weld) {
-    onProgress('Weld: fusione vertici duplicati…')
+    onProgress(t('progress.weld'))
     transforms.push(weld())
   }
   if (options.dedup) {
-    onProgress('Dedup: rimozione accessor duplicati…')
+    onProgress(t('progress.dedup'))
     transforms.push(dedup())
   }
   if (options.prune) {
-    onProgress('Prune: eliminazione nodi/materiali inutilizzati…')
+    onProgress(t('progress.prune'))
     transforms.push(prune())
   }
 
   if (options.simplify) {
-    onProgress('Simplify: semplificazione geometria…')
+    onProgress(t('progress.simplify'))
     await MeshoptSimplifier.ready
     transforms.push(simplify({
       simplifier: MeshoptSimplifier,
@@ -79,7 +80,7 @@ export async function applyGeometryOps(
 
   // Draco e Meshopt comprimono entrambi la geometria: mutuamente esclusivi, Draco ha precedenza.
   if (options.draco) {
-    onProgress('Draco: caricamento encoder e compressione geometria…')
+    onProgress(t('progress.draco'))
 
     // Il compressore Draco va registrato sull'IO, NON passato a draco().
     // La compressione avviene internamente durante io.writeBinary().
@@ -89,7 +90,7 @@ export async function applyGeometryOps(
     // draco() non prende encoder come opzione — solo metodo e quantizzazione
     await doc.transform(draco())
   } else if (options.meshopt) {
-    onProgress('Meshopt: compressione geometria (EXT_meshopt_compression)…')
+    onProgress(t('progress.meshopt'))
 
     // L'encoder va registrato sull'IO: EXTMeshoptCompression lo legge dalla dependency
     // 'meshopt.encoder' durante io.writeBinary(). meshopt() riordina/quantizza i vertici.
