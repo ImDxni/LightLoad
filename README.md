@@ -10,10 +10,12 @@ LightLoad compresses `.glb` files using Draco geometry compression and KTX2/Basi
 
 ## Features
 
-- **Geometry compression** — Weld, Dedup, Prune, Draco, Simplify (meshoptimizer)
+- **Optimization profiles** — one-click presets (_E-commerce_ · max compression, _AR / Meta_ · high quality) with a collapsible **Advanced Settings** panel for full manual control
+- **Geometry compression** — Weld, Dedup, Prune, Simplify (meshoptimizer), plus mutually-exclusive **Draco** or **Meshopt** (`EXT_meshopt_compression`) mesh compression
 - **Texture compression** — ETC1S (max compression) or UASTC (max quality) via Basis Universal / libktx
-- **Side-by-side 3D viewer** — Babylon.js with synchronized cameras
-- **Before / after metrics** — file size, vertex count, triangle count, texture inventory
+- **Side-by-side 3D viewer** — Babylon.js with synchronized cameras, a **wireframe toggle** to inspect decimated geometry, and a **focus mode** to expand the canvases
+- **Before / after metrics** — file size, vertex/triangle count, texture inventory and **estimated VRAM** footprint (geometry + textures)
+- **Multilingual UI** — i18n via `i18next` (English + Italian) with browser-language autodetection and a header switcher; worker progress messages are localized too
 - **100% client-side** — all processing runs in a Web Worker; no file ever leaves the browser
 
 ---
@@ -26,7 +28,7 @@ npm run setup:wasm   # downloads and copies all required WASM binaries
 npm run dev
 ```
 
-Open `http://localhost:5173`, drop a `.glb` file and hit **Ottimizza**.
+Open `http://localhost:5173`, drop a `.glb` file and hit **Optimize**.
 
 > **`setup:wasm`** does the following automatically:
 > - Copies Babylon.js KTX2 transcoder and Draco encoder/decoder from `node_modules`
@@ -43,10 +45,11 @@ Open `http://localhost:5173`, drop a `.glb` file and hit **Ottimizza**.
 | UI | React 19 + Vite + TypeScript |
 | 3D Viewer | Babylon.js v9 (`KhronosTextureContainer2`, `ArcRotateCamera`) |
 | GLB parsing | `@gltf-transform/core` v4 + `@gltf-transform/functions` |
-| Geometry compression | `draco3d` (encoder/decoder WASM) + `meshoptimizer` |
+| Geometry compression | `draco3d` (encoder/decoder WASM) + `meshoptimizer` (simplify + `EXT_meshopt_compression`) |
 | Texture encoding | `libktx.wasm` — KhronosGroup KTX-Software v4.4.2 |
 | Texture decoding | `msc_basis_transcoder.wasm` (Khronos) + `babylon.ktx2Decoder.js` |
 | Threading | Web Worker (`optimizer.worker.ts`) with transferable ArrayBuffers |
+| Localization | `i18next` + `react-i18next` (shared locales, main thread & worker) |
 
 ---
 
@@ -58,14 +61,24 @@ src/
 │   └── optimizer.worker.ts     # full pipeline: geometry ops + KTX2 encoding
 ├── lib/
 │   ├── ktx2Encoder.ts          # libktx WASM wrapper (Embind bindings)
-│   ├── geometryOps.ts          # weld / dedup / prune / draco / simplify
-│   └── metricsExtractor.ts     # vertex, triangle and texture counters
+│   ├── geometryOps.ts          # weld / dedup / prune / draco / meshopt / simplify
+│   ├── metricsExtractor.ts     # vertex, triangle and texture counters
+│   ├── vram.ts                 # estimated VRAM footprint
+│   └── profiles.ts             # optimization presets (e-commerce / AR)
 ├── components/
-│   ├── ViewerPanel.tsx          # Babylon.js canvas (prop-based, no forwardRef)
+│   ├── ViewerPanel.tsx         # Babylon.js canvas + wireframe (prop-based, no forwardRef)
 │   ├── MetricsTable.tsx
-│   └── OptimizeControls.tsx
+│   ├── VramBadge.tsx
+│   ├── OptimizeControls.tsx    # advanced geometry / texture toggles
+│   ├── ProfileSelector.tsx     # profile presets (progressive disclosure)
+│   └── LanguageSwitcher.tsx
 ├── hooks/
 │   └── useOptimizer.ts         # React ↔ Worker message bridge
+├── i18n/
+│   ├── index.ts                # react-i18next setup (main thread)
+│   ├── worker.ts               # standalone i18next instance for the Web Worker
+│   ├── resources.ts            # shared locale resources
+│   └── locales/                # en.json · it.json
 └── types/
     └── pipeline.ts             # shared types for worker messages and options
 
@@ -89,14 +102,18 @@ GLB input
   ├── dedup       remove duplicate accessors and textures
   ├── prune       strip unused nodes, materials and extensions
   ├── simplify    reduce polygon count (meshoptimizer)
-  ├── draco       compress mesh geometry (Google Draco)
+  │
+  ├── draco       compress mesh geometry (Google Draco)            ┐ mutually
+  ├── meshopt     compress mesh geometry (EXT_meshopt_compression) ┘ exclusive
   │
   └── KTX2  (libktx.wasm · runs in Web Worker)
         ├── ETC1S   — highest compression, GPU-native quality
         └── UASTC   — highest fidelity, supercompressed with Zstandard
 ```
 
-The entire pipeline runs inside a **Web Worker** so the UI remains fully responsive. Progress is streamed back to the main thread on each step.
+Profiles map directly onto this pipeline: _E-commerce_ favours Draco + ETC1S with aggressive simplification, _AR / Meta_ favours Meshopt + UASTC with light simplification, and _Custom_ exposes every toggle.
+
+The entire pipeline runs inside a **Web Worker** so the UI remains fully responsive. Progress is streamed back to the main thread on each step — localized via a standalone `i18next` instance that receives the active language with the optimization request.
 
 ---
 
