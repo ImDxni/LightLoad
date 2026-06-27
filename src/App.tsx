@@ -14,6 +14,7 @@ import { ProfileSelector } from './components/ProfileSelector'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
+import { Analytics } from '@vercel/analytics/next'
 import './App.css'
 
 const DEFAULT_PROFILE: Profile = 'ecommerce'
@@ -258,7 +259,7 @@ export default function App() {
 
   return (
     <div className="ll-app">
-
+    <Analytics />
       {/* ── HEADER ── */}
       <header className="ll-header">
         <div className="ll-header-left">
