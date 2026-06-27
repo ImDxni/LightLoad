@@ -12,6 +12,7 @@ import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
 import { ProfileSelector } from './components/ProfileSelector'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { FaqPage } from './components/FaqPage'
 import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
 import { Analytics } from '@vercel/analytics/react'
@@ -78,6 +79,14 @@ export default function App() {
   const [optimizedOptions, setOptimizedOptions] = useState<OptimizationOptions | null>(null)
   const pendingOptionsRef = useRef<OptimizationOptions | null>(null)
 
+  // Routing minimale via hash: #faq → pagina FAQ, tutto il resto → strumento
+  const [route, setRoute] = useState<'home' | 'faq'>(() => window.location.hash === '#faq' ? 'faq' : 'home')
+  useEffect(() => {
+    const onHash = () => setRoute(window.location.hash === '#faq' ? 'faq' : 'home')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
   useEffect(() => {
     fetch('https://api.github.com/repos/ImDxni/LightLoad')
       .then(r => r.json())
@@ -85,12 +94,12 @@ export default function App() {
       .catch(() => {})
   }, [])
 
-  // Allinea <title>, <html lang> e meta description alla lingua attiva
+  // Allinea <title>, <html lang> e meta description alla lingua attiva e alla pagina
   useEffect(() => {
     document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language
-    document.title = t('app.title')
+    document.title = route === 'faq' ? `${t('faq.title')} — LightLoad` : t('app.title')
     document.querySelector('meta[name="description"]')?.setAttribute('content', t('app.metaDescription'))
-  }, [t, i18n.resolvedLanguage, i18n.language])
+  }, [t, i18n.resolvedLanguage, i18n.language, route])
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
 
@@ -280,6 +289,7 @@ export default function App() {
         </div>
 
         <div className="ll-header-right">
+          <a href={route === 'faq' ? '#home' : '#faq'} className="ll-nav-link">{t('faq.nav')}</a>
           <LanguageSwitcher />
           <a href="https://github.com/danielecarpini/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
             <span className="ll-github-stars">★ {stars ?? '—'}</span>
@@ -292,8 +302,10 @@ export default function App() {
       {/* ── MAIN ── */}
       <main className="ll-main">
 
+        {route === 'faq' && <FaqPage />}
+
         {/* EMPTY */}
-        {view === 'empty' && (
+        {route !== 'faq' && view === 'empty' && (
           <section className="ll-section">
             <input key={fileInputKey} type="file" accept=".glb" id="glb-input"
               style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
@@ -323,7 +335,7 @@ export default function App() {
         )}
 
         {/* PROCESSING */}
-        {view === 'processing' && (
+        {route !== 'faq' && view === 'processing' && (
           <section className="ll-section">
             <div className="ll-proc-card">
               <div className="ll-proc-top">
@@ -346,7 +358,7 @@ export default function App() {
         )}
 
         {/* RESULT */}
-        {view === 'result' && (
+        {route !== 'faq' && view === 'result' && (
           <section className="ll-section ll-section--result">
             <div className={`ll-result-inner ${expanded ? 'll-result-inner--expanded' : ''}`}>
 

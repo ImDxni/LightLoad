@@ -46,6 +46,18 @@ body {
 .ll-header-left { display: flex; align-items: center; gap: 18px; }
 .ll-header-right { display: flex; align-items: center; gap: 12px; }
 
+/* Header nav link */
+.ll-nav-link {
+  color: #cfcfd6;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: all .15s;
+}
+.ll-nav-link:hover { background: rgba(255,255,255,0.05); color: #ededf2; }
+
 /* Language switcher */
 .ll-lang {
   display: flex;
@@ -937,6 +949,84 @@ input[type='range'] {
   flex-direction: column;
   gap: 20px;
 }
+
+/* ── FAQ page ── */
+.ll-section--faq {
+  display: block;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 0;
+}
+.ll-faq {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+.ll-faq-title {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 28px;
+}
+.ll-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.ll-faq-item {
+  background: #121216;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 20px 22px;
+}
+.ll-faq-q {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ededf2;
+  margin-bottom: 10px;
+  letter-spacing: -0.01em;
+}
+.ll-faq-a {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #b9b9c2;
+}
+.ll-faq-a + .ll-faq-a { margin-top: 10px; }
+.ll-faq-defs {
+  list-style: none;
+  margin-top: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ll-faq-def {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(124,92,255,0.06);
+  border: 1px solid rgba(124,92,255,0.16);
+}
+.ll-faq-def-term {
+  display: block;
+  font-weight: 600;
+  color: #c9bcff;
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+.ll-faq-def-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #b9b9c2;
+}
+.ll-faq-back {
+  display: inline-block;
+  margin-top: 30px;
+  color: #a99cff;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.ll-faq-back:hover { text-decoration: underline; }
 
 /* ── Bottone fluttuante wireframe ── */
 .ll-wire-btn {

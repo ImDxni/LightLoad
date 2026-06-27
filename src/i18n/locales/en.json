@@ -1,8 +1,43 @@
 {
   "app": {
-    "title": "Lightload — GLB Optimizer",
-    "metaDescription": "Client-side GLB optimizer: Draco geometry + KTX2 textures in your browser",
+    "title": "LightLoad — Free GLB Optimizer | Compress 3D Models in the Browser",
+    "metaDescription": "Free client-side GLB optimizer: compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, no servers — 100% private.",
     "beta": "BETA"
+  },
+  "faq": {
+    "nav": "FAQ",
+    "title": "Frequently Asked Questions",
+    "back": "Back to the tool",
+    "items": [
+      {
+        "q": "Are my 3D models uploaded to a server? Are they safe?",
+        "a": ["Absolutely not. LightLoad is a 100% client-side application. This means the entire optimization and compression process happens directly inside your browser (using your own device's power). No data, file, or geometry is ever sent to external servers. Your proprietary files stay yours, and your privacy is guaranteed."]
+      },
+      {
+        "q": "Which \"Optimization Profile\" should I choose?",
+        "a": ["It depends on where you plan to publish your model:"],
+        "list": [
+          { "term": "E-commerce (Max Compression)", "desc": "Use this profile for online stores (like Shopify or WooCommerce). It applies Draco compression and ETC1S textures to get the absolute smallest file, ensuring the web page loads instantly." },
+          { "term": "AR / Meta (High Quality)", "desc": "Ideal for social filters (Instagram, Spark AR, Snapchat) or Augmented Reality. It uses UASTC textures and lighter simplification to preserve maximum visual fidelity while optimizing video memory (VRAM) usage on mobile devices." }
+        ]
+      },
+      {
+        "q": "What is Draco compression?",
+        "a": ["Draco is an open-source technology built by Google. It lets you \"shrink\" the geometric structure (the vertices and polygons) of your 3D model without changing its visible shape. It's the main reason a 30 MB file can drop to 2 MB."]
+      },
+      {
+        "q": "Why is the \"VRAM\" metric so important?",
+        "a": ["When you load an unoptimized 3D model on a smartphone, the device has to decompress the images (PNG or JPEG) into its video memory (VRAM). This often freezes the browser or crashes older phones. LightLoad uses the KTX2 / Basis Universal standard: it converts your textures into a special format the GPU can read directly, cutting VRAM usage by up to 80% and ensuring smooth browsing on any device."]
+      },
+      {
+        "q": "Is the optimization stuck? It's taking a while...",
+        "a": ["It's not stuck! Because LightLoad works 100% locally without cloud super-computers, it's using your computer's processor to run complex math (via WebAssembly and Web Workers). For models with very high-resolution textures, the process can take 5 to 30 seconds. Sit back — the browser does all the work."]
+      },
+      {
+        "q": "Can I use LightLoad for free?",
+        "a": ["Yes, LightLoad is a free and open-source project. Since there are no server costs for processing files (because it all happens on your computer!), we can offer this tool for free to the community of 3D creators and developers."]
+      }
+    ]
   },
   "header": {
     "github": "GitHub",
