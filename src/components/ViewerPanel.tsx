@@ -80,6 +80,9 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
     cameraRef.current = camera
     onCameraReady?.(camera)
 
+    const preventWheelScroll = (e: WheelEvent) => e.preventDefault()
+    canvas.addEventListener('wheel', preventWheelScroll, { passive: false })
+
     const amb = new HemisphericLight('amb', new Vector3(0, 1, 0), scene)
     amb.intensity = 0.55
     const key = new DirectionalLight('key', new Vector3(3, 5, 4), scene)
@@ -97,6 +100,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
     return () => {
       clearTimeout(t0)
       ro.disconnect()
+      canvas.removeEventListener('wheel', preventWheelScroll)
       onCameraReady?.(null)
       engine.stopRenderLoop()
       scene.dispose()
