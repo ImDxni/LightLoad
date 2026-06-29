@@ -1,7 +1,7 @@
-import { WebIO, type Document } from '@gltf-transform/core'
+import { WebIO, type Document, type Texture } from '@gltf-transform/core'
 import { ALL_EXTENSIONS, KHRTextureBasisu } from '@gltf-transform/extensions'
 import type { WorkerRequest, WorkerResponse, OptimizationOptions } from '../types/pipeline'
-import { extractMetrics, findNonPow4Textures } from '../lib/metricsExtractor'
+import { extractMetrics } from '../lib/metricsExtractor'
 import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
 import { MeshoptDecoder } from 'meshoptimizer'
@@ -107,8 +107,19 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
   const textures = doc.getRoot().listTextures()
   if (textures.length === 0) return
 
-  const metrics = extractMetrics(doc, 0)
-  const badTextures = findNonPow4Textures(metrics.textures)
+  const badTextures: string[] = []
+  
+  for(const tex of textures) {
+    const size = tex.getSize();
+    if (!size) continue;
+
+    const [width, height] = size;
+    if (width > 0 && height > 0 && (width % 4 !== 0 || height % 4 !== 0)) {
+      badTextures.push(tex.getName() || `texture_${textures.indexOf(tex)}`)
+      await resizeTextures(tex, Math.round(width / 4) * 4, Math.round(height / 4) * 4);
+    }
+
+  }
   if (badTextures.length > 0) {
     warn(t('warnings.nonPow4', { list: badTextures.join(', ') }))
   }
@@ -158,6 +169,29 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
     tex.setImage(ktx2Data).setMimeType('image/ktx2')
   }
 }
+
+
+async function resizeTextures(texture: Texture, width: number, height: number): Promise<void> {
+  const imageBuffer = texture.getImage();
+  const mimeType = texture.getMimeType();
+  if (!imageBuffer || !mimeType) return;
+
+  const blob = new Blob([imageBuffer], { type: mimeType });
+
+  const imageBitmap = await createImageBitmap(blob);
+
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) return;
+  ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+  const newBlob = await canvas.convertToBlob({ type: mimeType });
+  const newBuffer = new Uint8Array(await newBlob.arrayBuffer());
+
+  texture.setImage(newBuffer);
+}
+
 
 // -------------------------------------------------------------------
 // Entry point

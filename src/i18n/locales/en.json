@@ -139,7 +139,7 @@
   },
   "warnings": {
     "ktxSkipped": "KTX2 compression skipped: {{error}}",
-    "nonPow4": "Textures not multiple of 4 px (possible KTX2 artifacts): {{list}}",
+    "nonPow4": "Textures not multiple of 4 px, the following textures will be resized automatically: {{list}}",
     "webcodecs": "WebCodecs decoding unavailable for \"{{name}}\": textures with transparency may show artifacts.",
     "decodeFailed": "Texture \"{{name}}\": decoding failed, skipped ({{error}})",
     "encodeFailed": "Texture \"{{name}}\": KTX2 encoding failed, skipped ({{error}})"

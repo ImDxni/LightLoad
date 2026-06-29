@@ -79,10 +79,3 @@ export function extractMetrics(
     vram: computeVramBreakdown(doc, ktx2Format),
   }
 }
-
-/** Controlla che le dimensioni siano multipli di 4 (requisito KHR_texture_basisu) */
-export function findNonPow4Textures(textures: TextureInfo[]): string[] {
-  return textures
-    .filter((t) => t.width > 0 && (t.width % 4 !== 0 || t.height % 4 !== 0))
-    .map((t) => `${t.name} (${t.width}×${t.height})`)
-}

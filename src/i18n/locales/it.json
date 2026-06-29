@@ -139,7 +139,7 @@
   },
   "warnings": {
     "ktxSkipped": "Compressione KTX2 saltata: {{error}}",
-    "nonPow4": "Texture non multipli di 4 px (possibili artefatti KTX2): {{list}}",
+    "nonPow4": "Texture non multipli di 4 px, le seguenti texture sono state ridimensionate in modo automatico: {{list}}",
     "webcodecs": "Decodifica WebCodecs non disponibile per \"{{name}}\": le texture con trasparenza potrebbero presentare artefatti.",
     "decodeFailed": "Texture \"{{name}}\": decodifica fallita, saltata ({{error}})",
     "encodeFailed": "Texture \"{{name}}\": encoding KTX2 fallito, saltata ({{error}})"
