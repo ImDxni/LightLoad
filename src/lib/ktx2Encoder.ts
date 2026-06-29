@@ -1,59 +1,17 @@
 /** Wrapper around KhronosGroup KTX-Software v4.4.2 (libktx.wasm). */
 import { t } from '../i18n/worker'
+import type {
+  KtxCreateInfoInstance,
+  KtxFactory,
+  KtxModule,
+  MipLevel,
+} from '../types/ktx2'
 
-interface KtxCreateInfoInstance {
-  glInternalformat: number
-  vkFormat: unknown          // expects the Embind enum object, not an integer
-  baseWidth: number
-  baseHeight: number
-  baseDepth: number
-  numDimensions: number
-  numLevels: number
-  numLayers: number
-  numFaces: number
-  isArray: boolean
-  generateMipmaps: boolean
-  [key: string]: unknown
-}
-
-interface KtxBasisParamsInstance {
-  uastc: boolean
-  qualityLevel: number
-  uastcFlags: number
-  threadCount: number
-  compressionLevel: number
-  normalMap: boolean
-  [key: string]: unknown
-}
-
-interface KtxTextureInstance {
-  setImageFromMemory(level: number, layer: number, faceSlice: number, data: Uint8Array): unknown
-  compressBasis(params: KtxBasisParamsInstance): unknown
-  writeToMemory(): Uint8Array
-  delete(): void
-}
-
-interface KtxModule {
-  texture: new (createInfo: KtxCreateInfoInstance, storage: unknown) => KtxTextureInstance
-  textureCreateInfo: new () => KtxCreateInfoInstance
-  basisParams: new () => KtxBasisParamsInstance
-  TextureCreateStorageEnum: Record<string, unknown>
-  VkFormat: Record<string, unknown>
-  [key: string]: unknown
-}
-
-type KtxFactory = (config?: { locateFile?: (filename: string) => string }) => Promise<KtxModule>
+import {enumNum} from './format'
 
 let cachedModule: KtxModule | null = null
 
-/** Extracts the numeric value from an Embind enum {value:N} or a plain number. */
-function enumNum(v: unknown, fallback = 0): number {
-  if (typeof v === 'number') return v
-  if (v !== null && typeof v === 'object' && 'value' in (v as object)) {
-    return Number((v as Record<string, unknown>).value)
-  }
-  return fallback
-}
+
 
 /**
  * BasisU (ETC1S/UASTC) requires dimensions that are multiples of 4.
@@ -86,8 +44,6 @@ function padToMultipleOf4(
   }
   return { data: dst, width: pw, height: ph }
 }
-
-type MipLevel = { data: Uint8Array; width: number; height: number }
 
 /** Builds the full mip chain to avoid aliasing at distance. */
 function generateMipChain(base: MipLevel): MipLevel[] {
