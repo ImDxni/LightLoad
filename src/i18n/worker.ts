@@ -1,8 +1,8 @@
 import i18n from 'i18next'
 import { resources, DEFAULT_LANG, type Lang } from './resources'
 
-// Istanza i18next autonoma per il Web Worker: niente React, niente localStorage.
-// La lingua attiva arriva con la richiesta di ottimizzazione (vedi setWorkerLang).
+// Standalone i18next instance for the Web Worker: no React, no localStorage.
+// The active language arrives with the optimization request (see setWorkerLang).
 const instance = i18n.createInstance()
 instance.init({
   resources,

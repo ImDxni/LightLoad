@@ -21,7 +21,7 @@ export interface ViewerPanelProps {
   onCameraReady?: (camera: ArcRotateCamera | null) => void
 }
 
-// NoLoadingScreen è una implementazione vuota di ILoadingScreen per disabilitare il caricamento predefinito di BabylonJS.
+// Empty ILoadingScreen implementation that disables Babylon.js's default loader.
 class NoLoadingScreen implements ILoadingScreen {
   loadingUIBackgroundColor = ''
   loadingUIText = ''
@@ -34,7 +34,7 @@ function ensureKtxTranscoder() {
   if (ktxConfigured) return
   ktxConfigured = true
   // babylon.ktx2Decoder.js (CDN UMD) + msc_basis_transcoder.js (Khronos v4.4.2)
-  // sono la coppia compatibile: il decoder si aspetta MSC_TRANSCODER con UastcImageTranscoder ecc.
+  // are the compatible pair: the decoder expects MSC_TRANSCODER with UastcImageTranscoder etc.
   KhronosTextureContainer2.URLConfig = {
     jsDecoderModule: '/wasm/babylon.ktx2Decoder.js',
     jsMSCTranscoder: '/wasm/msc_basis_transcoder.js',
@@ -55,7 +55,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
   const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<ArcRotateCamera | null>(null)
   const [loading, setLoading] = useState(false)
-  // Ref per riapplicare il wireframe dopo il caricamento async della mesh (aggiornato nell'effetto)
+  // Ref to re-apply wireframe after the async mesh load (updated in the effect below)
   const wireframeRef = useRef(wireframe)
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
             cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
             cam.radius = Math.max(size, 0.01) * 1.2
           }
-        } catch { /* camera resta nella posizione di default */ }
+        } catch { /* camera stays at its default position */ }
         cam.alpha = Math.PI / 4
         cam.beta = Math.PI / 3
       } finally {
@@ -175,7 +175,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
     return () => { cancelled = true }
   }, [buffer])
 
-  // Toggle wireframe senza ricaricare la mesh
+  // Toggle wireframe without reloading the mesh
   useEffect(() => {
     wireframeRef.current = wireframe
     const scene = sceneRef.current

@@ -12,18 +12,18 @@ function progress(message: string, percent: number) { send({ type: 'progress', m
 function warn(message: string) { send({ type: 'warning', message }) }
 
 // -------------------------------------------------------------------
-// Decodifica texture
+// Texture decoding
 // -------------------------------------------------------------------
 
 /**
- * Decodifica un'immagine in RGBA NON premoltiplicato via WebCodecs.
+ * Decodes an image to NON-premultiplied RGBA via WebCodecs.
  *
- * Il canvas 2D memorizza i colori premoltiplicati per l'alpha: ogni texel con
- * alpha=0 perde l'RGB (torna nero, non recuperabile) e in fase di mipmap quel
- * nero sbava nelle isole UV sottili. ImageDecoder + copyTo con format 'RGBA'
- * restituisce pixel un-premultiplied (garantito dalla spec W3C) ed evita il
- * round-trip sul canvas. copyTo gestisce anche la conversione da formati YUV
- * (i JPEG decodificano spesso in I420), quindi non serve gestire i formati a mano.
+ * The 2D canvas stores colors premultiplied by alpha: every texel with alpha=0
+ * loses its RGB (turns black, unrecoverable) and during mipmapping that black
+ * bleeds into thin UV islands. ImageDecoder + copyTo with format 'RGBA' returns
+ * un-premultiplied pixels (guaranteed by the W3C spec) and avoids the canvas
+ * round-trip. copyTo also converts from YUV formats (JPEGs often decode to
+ * I420), so there is no need to handle formats by hand.
  */
 async function decodeTextureToRGBA(
   image: Uint8Array,
@@ -32,7 +32,7 @@ async function decodeTextureToRGBA(
   const decoder = new ImageDecoder({
     data: image,
     type: mimeType,
-    // niente conversione sRGB: preserva normal map / ORM (dati non-colore)
+    // no sRGB conversion: preserves normal maps / ORM (non-color data)
     colorSpaceConversion: 'none',
   })
 
@@ -50,12 +50,12 @@ async function decodeTextureToRGBA(
     const tightStride = width * 4
     const { offset, stride } = layout[0]
 
-    // Fast path: il layout è già tightly-packed
+    // Fast path: the layout is already tightly packed
     if (offset === 0 && stride === tightStride && buffer.byteLength === tightStride * height) {
       return { data: new Uint8ClampedArray(buffer.buffer), width, height }
     }
 
-    // Ricompatta riga per riga rispettando offset e stride del layout
+    // Repack row by row, honoring the layout offset and stride
     const packed = new Uint8ClampedArray(tightStride * height)
     for (let y = 0; y < height; y++) {
       const srcStart = offset + y * stride
@@ -63,15 +63,15 @@ async function decodeTextureToRGBA(
     }
     return { data: packed, width, height }
   } finally {
-    // Libera la memoria nativa: senza questo si perde memoria a ogni texture
+    // Free native memory: without this we leak on every texture
     frame?.close()
     decoder.close()
   }
 }
 
 /**
- * Vecchio percorso canvas 2D. Fallback quando ImageDecoder non è disponibile
- * (es. Safari datati). Premoltiplica l'alpha: usato solo come ultima risorsa.
+ * Legacy 2D-canvas path. Fallback when ImageDecoder is unavailable (e.g. older
+ * Safari). Premultiplies alpha: used only as a last resort.
  */
 async function decodeViaCanvas(
   image: Uint8Array,
@@ -91,7 +91,7 @@ async function decodeViaCanvas(
 }
 
 // -------------------------------------------------------------------
-// Compressione texture KTX2
+// KTX2 texture compression
 // -------------------------------------------------------------------
 async function compressTextures(doc: Document, options: OptimizationOptions): Promise<void> {
   if (!options.texture.enabled) return
@@ -107,9 +107,9 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
   const textures = doc.getRoot().listTextures()
   if (textures.length === 0) return
 
-  // KHR_texture_basisu (ETC1S/UASTC) richiede dimensioni multiple di 4. Le texture
-  // non conformi vengono estese al multiplo di 4 più vicino dentro encodeTextureToKTX2:
-  // qui le segnaliamo soltanto all'utente.
+  // KHR_texture_basisu (ETC1S/UASTC) requires dimensions that are multiples of 4.
+  // encodeTextureToKTX2 pads non-conforming textures up to the next multiple of 4;
+  // here we only warn the user.
   const badTextures: string[] = []
   for (const tex of textures) {
     const size = tex.getSize()
@@ -147,9 +147,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
           imageData = await decodeViaCanvas(image, mimeType)
         }
       } else {
-        warn(
-          `Decodifica WebCodecs non disponibile per "${name}": le texture con trasparenza potrebbero presentare artefatti.`,
-        )
+        warn(t('warnings.webcodecs', { name }))
         imageData = await decodeViaCanvas(image, mimeType)
       }
     } catch (e) {
@@ -181,24 +179,23 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
   try {
     progress(t('progress.init'), 3)
 
-    // Crea il WebIO e registra tutte le estensioni
     const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
 
-    // Registra il decoder Draco per leggere GLB già compressi con Draco
-    // (non blocca: se il file non è Draco il decoder non viene usato)
+    // Register the Draco decoder to read GLBs already Draco-compressed
+    // (non-blocking: if the file isn't Draco the decoder is never used)
     try {
       const decoder = await loadDracoDecoder()
       io.registerDependencies({ 'draco3d.decoder': decoder })
     } catch {
-      // Decoder non disponibile — fallisce solo su GLB già Draco-compressi
+      // Decoder unavailable — only matters for already-Draco-compressed GLBs
     }
 
-    // Decoder Meshopt per leggere GLB già compressi con EXT_meshopt_compression
+    // Meshopt decoder to read GLBs already compressed with EXT_meshopt_compression
     try {
       await MeshoptDecoder.ready
       io.registerDependencies({ 'meshopt.decoder': MeshoptDecoder })
     } catch {
-      // Decoder non disponibile — fallisce solo su GLB già Meshopt-compressi
+      // Decoder unavailable — only matters for already-Meshopt-compressed GLBs
     }
 
     progress(t('progress.parsing'), 8)
@@ -211,7 +208,7 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
     }
 
     progress(t('progress.geometry'), 15)
-    // Passa io ad applyGeometryOps — registra l'encoder Draco sull'IO se necessario
+    // applyGeometryOps registers the Draco encoder on the IO when needed
     await applyGeometryOps(doc, options.geometry, io, (msg) => progress(msg, 40))
 
     await compressTextures(doc, options)

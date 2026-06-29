@@ -15,7 +15,7 @@ export function useOptimizer() {
 
   const optimize = useCallback(
     (buffer: ArrayBuffer, options: OptimizationOptions) => {
-      // Termina un worker precedente se ancora in esecuzione
+      // Terminate the previous worker if it is still running
       workerRef.current?.terminate()
 
       const worker = new OptimizerWorker()
@@ -61,7 +61,7 @@ export function useOptimizer() {
         setState({ phase: 'error', message: err.message ?? i18n.t('errors.unknownWorker') })
       }
 
-      // Trasferisce il buffer al worker (zero-copy)
+      // Transfer the buffer to the worker (zero-copy)
       worker.postMessage({ type: 'optimize', buffer, options, lng: i18n.language }, [buffer])
     },
     [],

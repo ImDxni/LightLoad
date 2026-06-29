@@ -12,7 +12,7 @@ export interface GeometryOptions {
 export interface TextureOptions {
   enabled: boolean
   format: 'etc1s' | 'uastc'
-  /** Qualità Basis Universal: 0–255 */
+  /** Basis Universal quality: 0–255 */
   quality: number
 }
 
@@ -28,7 +28,7 @@ export interface TextureInfo {
   mimeType: string
 }
 
-/** Stima del peso in VRAM (byte), suddivisa per categoria. */
+/** Estimated VRAM footprint (bytes), split by category. */
 export interface VramBreakdown {
   geometry: number
   textures: number
@@ -44,11 +44,11 @@ export interface GLBMetrics {
   vram: VramBreakdown
 }
 
-/** Messaggi inviati dalla UI al worker */
+/** Messages sent from the UI to the worker. */
 export type WorkerRequest =
   | { type: 'optimize'; buffer: ArrayBuffer; options: OptimizationOptions; lng: string }
 
-/** Messaggi inviati dal worker alla UI */
+/** Messages sent from the worker to the UI. */
 export type WorkerResponse =
   | { type: 'progress'; message: string; percent: number }
   | { type: 'success'; buffer: ArrayBuffer; metrics: GLBMetrics }

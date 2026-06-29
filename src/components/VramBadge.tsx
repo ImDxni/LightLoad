@@ -7,9 +7,9 @@ interface Props {
 }
 
 /**
- * Peso stimato in VRAM mostrato tra parentesi accanto alla dimensione su disco.
- * L'icona "i" rivela in hover/focus il dettaglio (geometria/texture) e la nota
- * sulla dipendenza dal device.
+ * Estimated VRAM footprint shown in parentheses next to the on-disk size.
+ * The "i" icon reveals the breakdown (geometry/textures) on hover/focus, along
+ * with the note about device dependence.
  */
 export function VramBadge({ vram }: Props) {
   const { t } = useTranslation()

@@ -4,20 +4,21 @@ import type { VramBreakdown } from '../types/pipeline'
 type Ktx2Format = 'etc1s' | 'uastc'
 
 /**
- * minFilter con catena mip (WebGL): *_MIPMAP_*.
- * NEAREST (9728) / LINEAR (9729) → nessuna mip.
+ * WebGL minFilter values that carry a mip chain (*_MIPMAP_*).
+ * NEAREST (9728) / LINEAR (9729) → no mips.
  */
 const MIP_FILTERS = new Set<number>([9984, 9985, 9986, 9987])
 
 /**
- * Stima del peso in VRAM di un Document.
+ * Estimates the VRAM footprint of a Document.
  *
- * La GPU decomprime tutto prima di disegnare: PNG/JPG e Draco NON riducono la
- * VRAM (tornano pieni), solo KTX2 (ETC1S/UASTC) resta compresso. Il calcolo
- * riflette questo selezionando i byte/pixel in base al formato GPU di destino.
+ * The GPU decompresses everything before drawing: PNG/JPG and Draco do NOT
+ * reduce VRAM (they expand back to full), only KTX2 (ETC1S/UASTC) stays
+ * compressed. The estimate reflects this by picking bytes-per-pixel from the
+ * target GPU format.
  *
- * @param ktx2Format modo usato per le texture compresse in KTX2; le texture non
- *                   compresse (png/jpg) restano RGBA8 a prescindere.
+ * @param ktx2Format mode used for KTX2-compressed textures; uncompressed
+ *                   textures (png/jpg) stay RGBA8 regardless.
  */
 export function computeVramBreakdown(doc: Document, ktx2Format: Ktx2Format): VramBreakdown {
   const geometry = computeGeometry(doc)
@@ -26,17 +27,16 @@ export function computeVramBreakdown(doc: Document, ktx2Format: Ktx2Format): Vra
 }
 
 // -------------------------------------------------------------------
-// Geometria
+// Geometry
 // -------------------------------------------------------------------
 function computeGeometry(doc: Document): number {
-  // Un primitivo può avere più attributi, e un attributo può essere condiviso tra più prim (es. POSITION).
-  // Per evitare di contare due volte lo stesso buffer, teniamo traccia degli accessors già contati.
+  // A primitive can have several attributes, and an attribute can be shared
+  // across primitives (e.g. POSITION). Track already-counted accessors so the
+  // same buffer is never counted twice.
   const modelAccessors = new Set<Accessor>();
 
   for (const mesh of doc.getRoot().listMeshes()) {
     for (const prim of mesh.listPrimitives()) {
-
-
       for (const attr of prim.listAttributes()) {
         modelAccessors.add(attr)
       }
@@ -54,7 +54,7 @@ function computeGeometry(doc: Document): number {
 }
 
 // -------------------------------------------------------------------
-// Texture
+// Textures
 // -------------------------------------------------------------------
 function computeTextures(doc: Document, ktx2Format: Ktx2Format): number {
   const mipmapped = buildMipmapMap(doc)
@@ -67,7 +67,7 @@ function computeTextures(doc: Document, ktx2Format: Ktx2Format): number {
     if (w <= 0 || h <= 0) continue
 
     const isKtx2 = tex.getMimeType() === 'image/ktx2'
-    // non compressa → RGBA8 = 4; UASTC (→BC7/ASTC) = 1; ETC1S (→BC1/ETC1) = 0.5
+    // uncompressed → RGBA8 = 4; UASTC (→BC7/ASTC) = 1; ETC1S (→BC1/ETC1) = 0.5
     const bytesPerPixel = isKtx2 ? (ktx2Format === 'uastc' ? 1 : 0.5) : 4
 
     const mipFactor = computeMipFactor(tex, w, h, isKtx2, mipmapped)
@@ -76,7 +76,7 @@ function computeTextures(doc: Document, ktx2Format: Ktx2Format): number {
   return bytes
 }
 
-/** Dimensioni: getSize() (png/jpg/webp); fallback header KTX2 (pixelWidth@20, pixelHeight@24). */
+/** Size from getSize() (png/jpg/webp); falls back to the KTX2 header (pixelWidth@20, pixelHeight@24). */
 function getTextureSize(tex: Texture): [number, number] | null {
   const size = tex.getSize()
   if (size) return [size[0], size[1]]
@@ -94,9 +94,9 @@ function getTextureSize(tex: Texture): [number, number] | null {
 /**
  * mipFactor = Σ (max(1, w>>i) × max(1, h>>i)) / (w × h)
  *
- * - KTX2 con levelCount>0  → usa esattamente i livelli contenuti nel file.
- * - KTX2 con levelCount==0 → mip generate a runtime → regola del sampler.
- * - png/jpg                → mip generate a runtime → regola del sampler.
+ * - KTX2 with levelCount>0  → use exactly the levels stored in the file.
+ * - KTX2 with levelCount==0 → mips generated at runtime → sampler rule.
+ * - png/jpg                 → mips generated at runtime → sampler rule.
  */
 function computeMipFactor(
   tex: Texture,
@@ -108,14 +108,14 @@ function computeMipFactor(
   if (isKtx2) {
     const levels = readKtx2LevelCount(tex)
     if (levels > 0) return mipFactorLevels(w, h, levels)
-    // levelCount == 0 → ricade sulla regola del sampler ↓
+    // levelCount == 0 → falls through to the sampler rule below
   }
-  // null/assente → i motori generano mip di default → trattata come mipmappata
+  // null/absent → engines generate mips by default → treat as mipmapped
   const hasMip = mipmapped.get(tex) ?? true
   return hasMip ? mipFactorFull(w, h) : 1
 }
 
-/** Catena mip completa fino a 1×1 (serie geometrica reale, non la costante 4/3). */
+/** Full mip chain down to 1×1 (real geometric series, not the 4/3 constant). */
 function mipFactorFull(w: number, h: number): number {
   let texels = 0
   let lw = w
@@ -129,7 +129,7 @@ function mipFactorFull(w: number, h: number): number {
   return texels / (w * h)
 }
 
-/** Somma esatta dei texel dei primi `levels` livelli (file KTX2 con mip incluse). */
+/** Exact texel sum of the first `levels` levels (KTX2 file with embedded mips). */
 function mipFactorLevels(w: number, h: number, levels: number): number {
   let texels = 0
   for (let i = 0; i < levels; i++) {
@@ -138,7 +138,7 @@ function mipFactorLevels(w: number, h: number, levels: number): number {
   return texels / (w * h)
 }
 
-/** levelCount dall'header KTX2: uint32 little-endian a offset 40. */
+/** levelCount from the KTX2 header: little-endian uint32 at offset 40. */
 function readKtx2LevelCount(tex: Texture): number {
   const img = tex.getImage()
   if (!img || img.byteLength < 44) return 0
@@ -147,9 +147,9 @@ function readKtx2LevelCount(tex: Texture): number {
 }
 
 /**
- * Mappa Texture → mipmappata, derivata dal minFilter del TextureInfo (il sampler
- * sta sull'uso nei materiali, non sulla Texture). Una texture è mipmappata se
- * basta UN uso con filtro mip o con minFilter null/assente (default dei motori).
+ * Maps Texture → mipmapped, derived from the TextureInfo minFilter (the sampler
+ * lives on the material usage, not on the Texture). A texture counts as
+ * mipmapped if ANY usage has a mip filter or a null/absent minFilter (engine default).
  */
 function buildMipmapMap(doc: Document): Map<Texture, boolean> {
   const filters = new Map<Texture, Array<number | null>>()
@@ -174,7 +174,6 @@ function buildMipmapMap(doc: Document): Map<Texture, boolean> {
 
   const result = new Map<Texture, boolean>()
   for (const [tex, fs] of filters) {
-    // un solo uso mip/null basta per considerarla mipmappata
     result.set(tex, fs.some((f) => f === null || MIP_FILTERS.has(f)))
   }
   return result

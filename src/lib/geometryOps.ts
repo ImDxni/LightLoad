@@ -5,16 +5,16 @@ import { MeshoptSimplifier, MeshoptEncoder } from 'meshoptimizer'
 import { t } from '../i18n/worker'
 
 /**
- * Carica un modulo Draco (encoder o decoder) via fetch + new Function.
+ * Loads a Draco module (encoder or decoder) via fetch + new Function.
  *
- * importScripts() NON è disponibile nei Web Worker ESM.
- * new Function valuta il CJS fornendo module/exports fittizi:
- *   - require('fs')/require('path') sono dentro if(isNode) che è false in browser
- *   - module.exports = DracoEncoderModule/DracoDecoderModule viene catturato
+ * importScripts() is NOT available in ESM Web Workers. new Function evaluates
+ * the CJS bundle with fake module/exports:
+ *   - require('fs')/require('path') sit inside if(isNode), which is false in the browser
+ *   - module.exports = DracoEncoderModule/DracoDecoderModule is captured
  */
 async function loadDracoModule(jsPath: string): Promise<unknown> {
   const res = await fetch(jsPath)
-  if (!res.ok) throw new Error(`${jsPath} non trovato (HTTP ${res.status})`)
+  if (!res.ok) throw new Error(`${jsPath} not found (HTTP ${res.status})`)
   const scriptText = await res.text()
 
   const mod = { exports: {} as Record<string, unknown> }
@@ -22,10 +22,10 @@ async function loadDracoModule(jsPath: string): Promise<unknown> {
 
   const factory = mod.exports as unknown as (opts: unknown) => unknown
   if (typeof factory !== 'function') {
-    throw new Error(`Factory non trovato in ${jsPath}`)
+    throw new Error(`Factory not found in ${jsPath}`)
   }
 
-  // Può essere sincrono (ritorna il modulo direttamente) o asincrono (Promise)
+  // May be synchronous (returns the module directly) or asynchronous (a Promise)
   const result = factory({ locateFile: (f: string) => `/wasm/${f}` })
   return result instanceof Promise ? await result : result
 }
@@ -78,22 +78,22 @@ export async function applyGeometryOps(
     await doc.transform(...transforms)
   }
 
-  // Draco e Meshopt comprimono entrambi la geometria: mutuamente esclusivi, Draco ha precedenza.
+  // Draco and Meshopt both compress geometry: mutually exclusive, Draco wins.
   if (options.draco) {
     onProgress(t('progress.draco'))
 
-    // Il compressore Draco va registrato sull'IO, NON passato a draco().
-    // La compressione avviene internamente durante io.writeBinary().
+    // The Draco compressor must be registered on the IO, NOT passed to draco().
+    // Compression happens internally during io.writeBinary().
     const encoder = await loadDracoEncoder()
     io.registerDependencies({ 'draco3d.encoder': encoder })
 
-    // draco() non prende encoder come opzione — solo metodo e quantizzazione
+    // draco() takes no encoder option — only method and quantization
     await doc.transform(draco())
   } else if (options.meshopt) {
     onProgress(t('progress.meshopt'))
 
-    // L'encoder va registrato sull'IO: EXTMeshoptCompression lo legge dalla dependency
-    // 'meshopt.encoder' durante io.writeBinary(). meshopt() riordina/quantizza i vertici.
+    // The encoder must be registered on the IO: EXTMeshoptCompression reads it from
+    // the 'meshopt.encoder' dependency during io.writeBinary(). meshopt() reorders/quantizes vertices.
     await MeshoptEncoder.ready
     io.registerDependencies({ 'meshopt.encoder': MeshoptEncoder })
     await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }))

@@ -41,7 +41,7 @@ function WireframeToggle({ active, onToggle }: { active: boolean; onToggle: () =
   )
 }
 
-// Focus mode: ingrandisce i canvas e nasconde la sidebar
+// Focus mode: enlarges the canvases and hides the sidebar
 function ExpandToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   const { t } = useTranslation()
   return (
@@ -75,11 +75,11 @@ export default function App() {
   const [dropError, setDropError] = useState<string | null>(null)
   const [fileInputKey, setFileInputKey] = useState(0)
   const [stars, setStars] = useState<number | null>(null)
-  // Opzioni dell'ultimo risultato prodotto, per capire se i parametri sono cambiati (gerarchia CTA)
+  // Options from the last produced result, used to tell whether params changed (CTA hierarchy)
   const [optimizedOptions, setOptimizedOptions] = useState<OptimizationOptions | null>(null)
   const pendingOptionsRef = useRef<OptimizationOptions | null>(null)
 
-  // Routing minimale via hash: #faq → pagina FAQ, tutto il resto → strumento
+  // Minimal hash routing: #faq → FAQ page, everything else → the tool
   const [route, setRoute] = useState<'home' | 'faq'>(() => window.location.hash === '#faq' ? 'faq' : 'home')
   useEffect(() => {
     const onHash = () => setRoute(window.location.hash === '#faq' ? 'faq' : 'home')
@@ -94,7 +94,7 @@ export default function App() {
       .catch(() => {})
   }, [])
 
-  // Allinea <title>, <html lang> e meta description alla lingua attiva e alla pagina
+  // Keep <title>, <html lang> and meta description in sync with the active language and page
   useEffect(() => {
     document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language
     document.title = route === 'faq' ? `${t('faq.title')} — LightLoad` : t('app.title')
@@ -103,7 +103,7 @@ export default function App() {
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
 
-  // Stato derivato dal worker — niente mirror in useState (evita render a cascata)
+  // Derived from the worker state — no useState mirror (avoids cascading renders)
   const optimizedBuffer = optState.phase === 'done' ? optState.optimizedBuffer : null
   const afterMetrics    = optState.phase === 'done' ? optState.metrics : null
   const view: View =
@@ -115,7 +115,7 @@ export default function App() {
   const syncingRef = useRef(false)
   const beforeCamRef = useRef<ArcRotateCamera | null>(null)
   const afterCamRef  = useRef<ArcRotateCamera | null>(null)
-  // Observer<Camera> perché onViewMatrixChangedObservable è Observable<Camera>
+  // Observer<Camera> because onViewMatrixChangedObservable is Observable<Camera>
   const obsARef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
   const obsBRef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
 
@@ -131,7 +131,7 @@ export default function App() {
     })
   }
 
-  // Ricollega sync quando entrambe le camere sono disponibili
+  // Reconnect sync once both cameras are available
   function connectCameras(a: ArcRotateCamera | null, b: ArcRotateCamera | null) {
     if (obsARef.current && beforeCamRef.current) beforeCamRef.current.onViewMatrixChangedObservable.remove(obsARef.current)
     if (obsBRef.current && afterCamRef.current)  afterCamRef.current.onViewMatrixChangedObservable.remove(obsBRef.current)
@@ -199,7 +199,7 @@ export default function App() {
     reader.readAsArrayBuffer(file)
   }, [loadFile, t])
 
-  // ── Profili / opzioni ───────────────────────────────────────────────
+  // ── Profiles / options ──────────────────────────────────────────────
   const handleSelectProfile = useCallback((p: Profile) => {
     setProfile(p)
     if (p === 'custom') {
@@ -210,7 +210,7 @@ export default function App() {
     }
   }, [])
 
-  // Ogni modifica manuale nel pannello avanzato passa a "Custom"
+  // Any manual change in the advanced panel switches to "Custom"
   const handleOptionsChange = useCallback((opts: OptimizationOptions) => {
     setOptions(opts)
     setProfile('custom')
@@ -262,7 +262,7 @@ export default function App() {
     ? Math.round((1 - afterMetrics.fileSize / beforeMetrics.fileSize) * 100)
     : null
 
-  // Dirty = nessun risultato o opzioni cambiate dall'ultimo run → decide quale CTA è primaria
+  // Dirty = no result, or options changed since the last run → decides which CTA is primary
   const isRunning = optState.phase === 'running'
   const isDirty = !optimizedBuffer || JSON.stringify(options) !== JSON.stringify(optimizedOptions)
 

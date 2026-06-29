@@ -43,7 +43,7 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
 
   return (
     <>
-      {/* Geometria */}
+      {/* Geometry */}
       <div>
         <div className="ll-section-label">{t('controls.geometry')}</div>
         <Toggle name={t('controls.weld')}  desc={t('controls.weldDesc')}    on={weld}  onToggle={() => setGeo('weld', !weld)}   disabled={disabled} />
@@ -132,7 +132,6 @@ export function OptimizeControls({ options, onChange, disabled }: Props) {
               onChange={(e) => setTex('quality', Number(e.target.value))}
             />
 
-            {/* Warning texture non multiple di 4 — statica per ora */}
             <div className="ll-warn">
               <span className="ll-warn-icon">⚠</span>
               <div className="ll-warn-text">{t('controls.texWarn')}</div>

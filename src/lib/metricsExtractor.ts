@@ -3,8 +3,8 @@ import type { GLBMetrics, TextureInfo } from '../types/pipeline'
 import { computeVramBreakdown } from './vram'
 
 /**
- * @param ktx2Format modo KTX2 di destinazione, usato solo per pesare in VRAM le
- *                   texture compresse (image/ktx2). Irrilevante per png/jpg.
+ * @param ktx2Format target KTX2 mode, used only to weigh compressed textures
+ *                   (image/ktx2) in VRAM. Irrelevant for png/jpg.
  */
 export function extractMetrics(
   doc: Document,
@@ -33,7 +33,7 @@ export function extractMetrics(
     let width = 0
     let height = 0
 
-    // Leggo le dimensioni dal blob PNG/JPEG se disponibili
+    // Read dimensions from the PNG/JPEG blob when available
     if (image) {
       try {
         const view = new DataView(image.buffer, image.byteOffset)
@@ -42,7 +42,7 @@ export function extractMetrics(
           width = view.getUint32(16, false)
           height = view.getUint32(20, false)
         } else if (mime === 'image/jpeg' || mime === 'image/jpg') {
-          // Cerca SOF marker nel JPEG
+          // Find the SOF marker in the JPEG
           let offset = 2
           while (offset < image.length - 8) {
             const marker = view.getUint16(offset, false)
@@ -58,12 +58,12 @@ export function extractMetrics(
           }
         }
       } catch {
-        // Dimensioni non leggibili
+        // Dimensions unreadable
       }
     }
 
     return {
-      name: tex.getName() || '(senza nome)',
+      name: tex.getName() || '(unnamed)',
       width,
       height,
       mimeType: tex.getMimeType(),

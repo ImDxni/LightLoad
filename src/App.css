@@ -356,7 +356,7 @@ body {
   overflow: auto;
   transition: gap .35s cubic-bezier(.4,0,.2,1);
 }
-/* Focus mode: la sidebar scivola via e i viewer occupano tutto lo spazio */
+/* Focus mode: the sidebar slides away and the viewers take all the space */
 .ll-result-inner--expanded { gap: 0; }
 .ll-result-inner--expanded .ll-sidebar {
   flex-basis: 0;
@@ -386,7 +386,7 @@ body {
 }
 .ll-viewers-row--expanded { height: calc(100vh - 150px); }
 
-/* Barra sotto i viewer: hint sincronizzazione + toggle espansione */
+/* Bar under the viewers: sync hint + expand toggle */
 .ll-viewers-bar {
   display: flex;
   align-items: center;
@@ -493,7 +493,7 @@ body {
   color: #5a5a64;
   font-size: 12px;
   pointer-events: none;
-  z-index: 5;         /* sopra il canvas Babylon.js */
+  z-index: 5;         /* above the Babylon.js canvas */
   user-select: none;
 }
 .ll-viewer-footer {
@@ -529,7 +529,7 @@ body {
   border-radius: 14px;
   overflow-x: hidden;
   overflow-y: auto;
-  /* Su schermi bassi la tabella scrolla internamente invece di spingere il layout */
+  /* On short screens the table scrolls internally instead of pushing the layout */
   max-height: 34vh;
   flex: 0 0 auto;
 }
@@ -543,7 +543,7 @@ body {
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: #65656f;
-  /* Resta visibile durante lo scroll verticale della tabella */
+  /* Stays visible during the table's vertical scroll */
   position: sticky;
   top: 0;
   background: #121216;
@@ -883,7 +883,7 @@ input[type='range'] {
   border: 1px solid rgba(248,113,113,0.20);
 }
 
-/* ── Profili (progressive disclosure) ── */
+/* ── Profiles (progressive disclosure) ── */
 .ll-profiles {
   display: flex;
   flex-direction: column;
@@ -918,7 +918,7 @@ input[type='range'] {
   color: #7a7a84;
 }
 
-/* ── Pannello impostazioni avanzate (collassabile) ── */
+/* ── Advanced settings panel (collapsible) ── */
 .ll-advanced {
   border-top: 1px solid rgba(255,255,255,0.06);
   padding-top: 6px;
@@ -1028,7 +1028,7 @@ input[type='range'] {
 }
 .ll-faq-back:hover { text-decoration: underline; }
 
-/* ── Bottone fluttuante wireframe ── */
+/* ── Floating wireframe button ── */
 .ll-wire-btn {
   position: absolute;
   top: 10px;

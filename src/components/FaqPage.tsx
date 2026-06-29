@@ -7,7 +7,7 @@ export function FaqPage() {
   const { t } = useTranslation()
   const items = t('faq.items', { returnObjects: true }) as FaqItem[]
 
-  // FAQPage structured data → eleggibile per i rich result di Google
+  // FAQPage structured data → eligible for Google rich results
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
