@@ -101,10 +101,10 @@
     "ratio": "Rapporto",
     "error": "Errore",
     "ktx2": "KTX2 / Basis Universal",
-    "ktx2Desc": "Richiede libktx.wasm in /wasm/",
+    "ktx2Desc": "Compressione texture KTX2 / Basis Universal",
     "codec": "Codec di compressione",
     "quality": "Qualità",
-    "texWarn": "Le texture con dimensioni non multiple di 4 px verranno segnalate nella console."
+    "texWarn": "Le texture con dimensione non multipli di 4 px verranno automaticamente ridimensionate."
   },
   "metrics": {
     "metric": "Metrica",

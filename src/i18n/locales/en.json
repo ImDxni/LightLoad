@@ -101,10 +101,10 @@
     "ratio": "Ratio",
     "error": "Error",
     "ktx2": "KTX2 / Basis Universal",
-    "ktx2Desc": "Requires libktx.wasm in /wasm/",
+    "ktx2Desc": "Texture compression KTX2 / Basis Universal",
     "codec": "Compression codec",
     "quality": "Quality",
-    "texWarn": "Textures with dimensions not multiple of 4 px will be reported in the console."
+    "texWarn": "Textures with non-multiple-of-4 px dimensions will be automatically resized."
   },
   "metrics": {
     "metric": "Metric",

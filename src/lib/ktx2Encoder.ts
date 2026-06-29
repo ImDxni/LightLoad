@@ -1,11 +1,6 @@
 /**
  * Wrapper per libktx.wasm di KhronosGroup KTX-Software v4.4.2.
  *
- * Note sul binding Embind di libktx:
- *  - Le enum (VkFormat, TextureCreateStorageEnum) sono oggetti {value:N}, non interi
- *  - Il setter textureCreateInfo.vkFormat accetta solo l'oggetto enum, non un intero
- *  - I metodi dell'istanza texture: setImageFromMemory, compressBasis, writeToMemory
- *  - basisParams: struct Embind con campi uastc, qualityLevel, threadCount, compressionLevel
  */
 import { t } from '../i18n/worker'
 
@@ -63,6 +58,89 @@ function enumNum(v: unknown, fallback = 0): number {
   return fallback
 }
 
+/**
+ * BasisU (ETC1S/UASTC) richiede dimensioni multiple di 4. Le texture non conformi vengono automaticamente
+ * estese al multiplo di 4 maggiori.
+ */
+function padToMultipleOf4(
+  img: { data: Uint8ClampedArray | Uint8Array; width: number; height: number },
+): { data: Uint8Array; width: number; height: number } {
+  const { width: w, height: h } = img
+  const pw = (w + 3) & ~3
+  const ph = (h + 3) & ~3
+  const src = img.data instanceof Uint8Array
+    ? img.data
+    : new Uint8Array(img.data.buffer, img.data.byteOffset, img.data.byteLength)
+
+  if (pw === w && ph === h) return { data: src, width: w, height: h }
+
+  const dst = new Uint8Array(pw * ph * 4)
+  for (let y = 0; y < ph; y++) {
+    const sy = y < h ? y : h - 1
+    for (let x = 0; x < pw; x++) {
+      const sx = x < w ? x : w - 1
+      const s = (sy * w + sx) * 4
+      const d = (y * pw + x) * 4
+      dst[d] = src[s]
+      dst[d + 1] = src[s + 1]
+      dst[d + 2] = src[s + 2]
+      dst[d + 3] = src[s + 3]
+    }
+  }
+  return { data: dst, width: pw, height: ph }
+}
+
+type MipLevel = { data: Uint8Array; width: number; height: number }
+
+/**
+ * Genera la catena di mipmap completa per evitare effetto aliasing
+ */
+function generateMipChain(base: MipLevel): MipLevel[] {
+  const levels: MipLevel[] = [base]
+  let { data: src, width: w, height: h } = base
+
+  while (w > 1 || h > 1) {
+    const dw = Math.max(1, w >> 1)
+    const dh = Math.max(1, h >> 1)
+    const dst = new Uint8Array(dw * dh * 4)
+
+    for (let y = 0; y < dh; y++) {
+      const y0 = Math.min(y * 2, h - 1)
+      const y1 = Math.min(y * 2 + 1, h - 1)
+      for (let x = 0; x < dw; x++) {
+        const x0 = Math.min(x * 2, w - 1)
+        const x1 = Math.min(x * 2 + 1, w - 1)
+        const p00 = (y0 * w + x0) * 4
+        const p01 = (y0 * w + x1) * 4
+        const p10 = (y1 * w + x0) * 4
+        const p11 = (y1 * w + x1) * 4
+        const a00 = src[p00 + 3], a01 = src[p01 + 3], a10 = src[p10 + 3], a11 = src[p11 + 3]
+        const aSum = a00 + a01 + a10 + a11
+        const d = (y * dw + x) * 4
+
+        if (aSum === 0) {
+          // tutto trasparente: media RGB semplice per non perdere il colore di base
+          dst[d] = (src[p00] + src[p01] + src[p10] + src[p11]) >> 2
+          dst[d + 1] = (src[p00 + 1] + src[p01 + 1] + src[p10 + 1] + src[p11 + 1]) >> 2
+          dst[d + 2] = (src[p00 + 2] + src[p01 + 2] + src[p10 + 2] + src[p11 + 2]) >> 2
+          dst[d + 3] = 0
+        } else {
+          // RGB pesato per alpha, alpha = media dei 4 texel
+          dst[d] = Math.round((src[p00] * a00 + src[p01] * a01 + src[p10] * a10 + src[p11] * a11) / aSum)
+          dst[d + 1] = Math.round((src[p00 + 1] * a00 + src[p01 + 1] * a01 + src[p10 + 1] * a10 + src[p11 + 1] * a11) / aSum)
+          dst[d + 2] = Math.round((src[p00 + 2] * a00 + src[p01 + 2] * a01 + src[p10 + 2] * a10 + src[p11 + 2] * a11) / aSum)
+          dst[d + 3] = (aSum + 2) >> 2
+        }
+      }
+    }
+
+    levels.push({ data: dst, width: dw, height: dh })
+    src = dst; w = dw; h = dh
+  }
+
+  return levels
+}
+
 /** Controlla se il risultato Embind è successo (void, 0, o enum {value:0}) */
 function isKtxSuccess(result: unknown): boolean {
   if (result === undefined || result === null) return true
@@ -97,6 +175,12 @@ export async function encodeTextureToKTX2(
 ): Promise<Uint8Array> {
   const ktx = await loadKtxModule()
 
+  // Snap a multiplo di 4 (richiesto da BasisU) prima di costruire il textureCreateInfo
+  const padded = padToMultipleOf4(imageData)
+
+  // Calcola la mip chain: senza mipmap le texture compresse fanno aliasing in lontananza
+  const mips = generateMipChain(padded)
+
   // Gli enum Embind sono oggetti {value:N} — il costruttore li vuole come tali
   const storageEnum = ktx.TextureCreateStorageEnum as Record<string, unknown>
   const storageEnumObj = storageEnum.ALLOC_STORAGE ?? storageEnum.alloc
@@ -109,11 +193,11 @@ export async function encodeTextureToKTX2(
   const ci = new ktx.textureCreateInfo() as KtxCreateInfoInstance
   ci.glInternalformat = 0
   ;(ci as Record<string, unknown>).vkFormat = vkFormatEnumObj
-  ci.baseWidth = imageData.width
-  ci.baseHeight = imageData.height
+  ci.baseWidth = padded.width
+  ci.baseHeight = padded.height
   ci.baseDepth = 1
   ci.numDimensions = 2
-  ci.numLevels = 1
+  ci.numLevels = mips.length
   ci.numLayers = 1
   ci.numFaces = 1
   ci.isArray = false
@@ -122,9 +206,10 @@ export async function encodeTextureToKTX2(
   const texture = new ktx.texture(ci, storageEnumObj)
 
   try {
-    const rgba = new Uint8Array(imageData.data.buffer)
-    const setResult = texture.setImageFromMemory(0, 0, 0, rgba)
-    if (!isKtxSuccess(setResult)) throw new Error(`setImageFromMemory: ${enumNum(setResult, -1)}`)
+    for (let level = 0; level < mips.length; level++) {
+      const setResult = texture.setImageFromMemory(level, 0, 0, mips[level].data)
+      if (!isKtxSuccess(setResult)) throw new Error(`setImageFromMemory[${level}]: ${enumNum(setResult, -1)}`)
+    }
 
     const params = new ktx.basisParams()
     params.uastc = format === 'uastc'
