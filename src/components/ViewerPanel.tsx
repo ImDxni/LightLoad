@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Engine,
   Scene,
@@ -13,6 +13,7 @@ import { AppendSceneAsync } from '@babylonjs/core/Loading/sceneLoader'
 import '@babylonjs/loaders/glTF'
 
 import type { ILoadingScreen } from '@babylonjs/core'
+import { CustomLoadingScreen } from './CustomLoadingScreen'
 
 export interface ViewerPanelProps {
   buffer: ArrayBuffer | null
@@ -53,6 +54,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
   const engineRef = useRef<Engine | null>(null)
   const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<ArcRotateCamera | null>(null)
+  const [loading, setLoading] = useState(false)
   // Ref per riapplicare il wireframe dopo il caricamento async della mesh (aggiornato nell'effetto)
   const wireframeRef = useRef(wireframe)
 
@@ -120,11 +122,12 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
     scene.materials.slice().forEach(m => m.dispose())
     scene.textures.slice().forEach(t => t.dispose())
 
-    if (!buffer) return
-
     let cancelled = false
 
-      ; (async () => {
+    ;(async () => {
+      if (!buffer) { setLoading(false); return }
+      setLoading(true)
+      try {
         const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
         try {
           await AppendSceneAsync(file, scene)
@@ -135,10 +138,7 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
 
         if (cancelled || scene.isDisposed) return
 
-
-        scene.animationGroups.forEach(ag => {
-          ag.stop(); ag.reset();
-        });
+        scene.animationGroups.forEach(ag => { ag.stop(); ag.reset() })
 
         scene.meshes.forEach(m => m.computeWorldMatrix(true))
         await new Promise<void>(r => requestAnimationFrame(() => r()))
@@ -167,7 +167,10 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
         } catch { /* camera resta nella posizione di default */ }
         cam.alpha = Math.PI / 4
         cam.beta = Math.PI / 3
-      })()
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
 
     return () => { cancelled = true }
   }, [buffer])
@@ -181,16 +184,19 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
   }, [wireframe])
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: 'block',
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        width: '100%', height: '100%',
-        touchAction: 'none',
-        pointerEvents: buffer ? 'auto' : 'none',
-      }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{
+          display: 'block',
+          position: 'absolute',
+          top: 0, left: 0, right: 0, bottom: 0,
+          width: '100%', height: '100%',
+          touchAction: 'none',
+          pointerEvents: buffer ? 'auto' : 'none',
+        }}
+      />
+      {loading && <CustomLoadingScreen />}
+    </>
   )
 }
