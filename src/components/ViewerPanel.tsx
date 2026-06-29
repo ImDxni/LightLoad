@@ -24,8 +24,8 @@ export interface ViewerPanelProps {
 class NoLoadingScreen implements ILoadingScreen {
   loadingUIBackgroundColor = ''
   loadingUIText = ''
-  displayLoadingUI() {}
-  hideLoadingUI() {}
+  displayLoadingUI() { }
+  hideLoadingUI() { }
 }
 
 let ktxConfigured = false
@@ -51,7 +51,7 @@ function ensureKtxTranscoder() {
 export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: ViewerPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<Engine | null>(null)
-  const sceneRef  = useRef<Scene | null>(null)
+  const sceneRef = useRef<Scene | null>(null)
   const cameraRef = useRef<ArcRotateCamera | null>(null)
   // Ref per riapplicare il wireframe dopo il caricamento async della mesh (aggiornato nell'effetto)
   const wireframeRef = useRef(wireframe)
@@ -106,14 +106,14 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
       scene.dispose()
       engine.dispose()
       engineRef.current = null
-      sceneRef.current  = null
+      sceneRef.current = null
       cameraRef.current = null
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const scene = sceneRef.current
-    const cam   = cameraRef.current
+    const cam = cameraRef.current
     if (!scene || !cam) return
 
     scene.meshes.slice().forEach(m => m.dispose())
@@ -124,45 +124,50 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
 
     let cancelled = false
 
-    ;(async () => {
-      const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
-      try {
-        await AppendSceneAsync(file, scene)
-      } catch (e) {
-        if (!cancelled) console.error('[ViewerPanel] load failed:', e)
-        return
-      }
-
-      if (cancelled || scene.isDisposed) return
-
-      scene.meshes.forEach(m => m.computeWorldMatrix(true))
-      await new Promise<void>(r => requestAnimationFrame(() => r()))
-
-      if (cancelled || scene.isDisposed) return
-
-      scene.materials.forEach(m => { m.wireframe = wireframeRef.current })
-
-      try {
-        const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
-        if (visible.length > 0) {
-          let xMin = Infinity, yMin = Infinity, zMin = Infinity
-          let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity
-          for (const m of visible) {
-            const bi = m.getBoundingInfo()
-            const mn = bi.boundingBox.minimumWorld
-            const mx = bi.boundingBox.maximumWorld
-            if (mn.x < xMin) xMin = mn.x; if (mx.x > xMax) xMax = mx.x
-            if (mn.y < yMin) yMin = mn.y; if (mx.y > yMax) yMax = mx.y
-            if (mn.z < zMin) zMin = mn.z; if (mx.z > zMax) zMax = mx.z
-          }
-          const size = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2)
-          cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
-          cam.radius = Math.max(size, 0.01) * 1.2
+      ; (async () => {
+        const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
+        try {
+          await AppendSceneAsync(file, scene)
+        } catch (e) {
+          if (!cancelled) console.error('[ViewerPanel] load failed:', e)
+          return
         }
-      } catch { /* camera resta nella posizione di default */ }
-      cam.alpha = Math.PI / 4
-      cam.beta  = Math.PI / 3
-    })()
+
+        if (cancelled || scene.isDisposed) return
+
+
+        scene.animationGroups.forEach(ag => {
+          ag.stop(); ag.reset();
+        });
+
+        scene.meshes.forEach(m => m.computeWorldMatrix(true))
+        await new Promise<void>(r => requestAnimationFrame(() => r()))
+
+        if (cancelled || scene.isDisposed) return
+
+        scene.materials.forEach(m => { m.wireframe = wireframeRef.current })
+
+        try {
+          const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
+          if (visible.length > 0) {
+            let xMin = Infinity, yMin = Infinity, zMin = Infinity
+            let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity
+            for (const m of visible) {
+              const bi = m.getBoundingInfo()
+              const mn = bi.boundingBox.minimumWorld
+              const mx = bi.boundingBox.maximumWorld
+              if (mn.x < xMin) xMin = mn.x; if (mx.x > xMax) xMax = mx.x
+              if (mn.y < yMin) yMin = mn.y; if (mx.y > yMax) yMax = mx.y
+              if (mn.z < zMin) zMin = mn.z; if (mx.z > zMax) zMax = mx.z
+            }
+            const size = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2)
+            cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
+            cam.radius = Math.max(size, 0.01) * 1.2
+          }
+        } catch { /* camera resta nella posizione di default */ }
+        cam.alpha = Math.PI / 4
+        cam.beta = Math.PI / 3
+      })()
 
     return () => { cancelled = true }
   }, [buffer])
