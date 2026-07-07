@@ -2,6 +2,7 @@ import { WebIO, type Document } from '@gltf-transform/core'
 import { ALL_EXTENSIONS, KHRTextureBasisu } from '@gltf-transform/extensions'
 import type { WorkerRequest, WorkerResponse, OptimizationOptions } from '../types/pipeline'
 import { extractMetrics } from '../lib/metricsExtractor'
+import { sanitizeGlbPadding } from '../lib/glbSanitizer'
 import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
 import { MeshoptDecoder } from 'meshoptimizer'
@@ -201,7 +202,7 @@ self.onmessage = async (ev: MessageEvent<WorkerRequest>) => {
     progress(t('progress.parsing'), 8)
     let doc: Document
     try {
-      doc = await io.readBinary(new Uint8Array(buffer))
+      doc = await io.readBinary(new Uint8Array(sanitizeGlbPadding(buffer)))
     } catch (e) {
       send({ type: 'error', message: t('errors.invalidGlb', { error: String(e) }) })
       return
