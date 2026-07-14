@@ -100,7 +100,7 @@ export default function App() {
     fetch('https://api.github.com/repos/ImDxni/LightLoad')
       .then(r => r.json())
       .then(d => { if (typeof d.stargazers_count === 'number') setStars(d.stargazers_count) })
-      .catch(() => {})
+      .catch(() => { })
   }, [])
 
   // Keep <title>, <html lang>, meta description, canonical and og:url in sync with the active language and page
@@ -118,7 +118,7 @@ export default function App() {
 
   // Derived from the worker state — no useState mirror (avoids cascading renders)
   const optimizedBuffer = optState.phase === 'done' ? optState.optimizedBuffer : null
-  const afterMetrics    = optState.phase === 'done' ? optState.metrics : null
+  const afterMetrics = optState.phase === 'done' ? optState.metrics : null
   const view: View =
     !originalBuffer ? 'empty'
       : optState.phase === 'running' ? 'processing'
@@ -127,7 +127,7 @@ export default function App() {
   // ── Camera sync ────────────────────────────────────────────────────
   const syncingRef = useRef(false)
   const beforeCamRef = useRef<ArcRotateCamera | null>(null)
-  const afterCamRef  = useRef<ArcRotateCamera | null>(null)
+  const afterCamRef = useRef<ArcRotateCamera | null>(null)
   // Observer<Camera> because onViewMatrixChangedObservable is Observable<Camera>
   const obsARef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
   const obsBRef = useRef<ReturnType<ArcRotateCamera['onViewMatrixChangedObservable']['add']>>(null)
@@ -137,7 +137,7 @@ export default function App() {
       if (syncingRef.current) return
       syncingRef.current = true
       dst.alpha = src.alpha
-      dst.beta  = src.beta
+      dst.beta = src.beta
       dst.radius = src.radius
       dst.target.copyFrom(src.target)
       syncingRef.current = false
@@ -147,7 +147,7 @@ export default function App() {
   // Reconnect sync once both cameras are available
   function connectCameras(a: ArcRotateCamera | null, b: ArcRotateCamera | null) {
     if (obsARef.current && beforeCamRef.current) beforeCamRef.current.onViewMatrixChangedObservable.remove(obsARef.current)
-    if (obsBRef.current && afterCamRef.current)  afterCamRef.current.onViewMatrixChangedObservable.remove(obsBRef.current)
+    if (obsBRef.current && afterCamRef.current) afterCamRef.current.onViewMatrixChangedObservable.remove(obsBRef.current)
     obsARef.current = null
     obsBRef.current = null
     if (a && b) {
@@ -279,11 +279,11 @@ export default function App() {
   }, [resetOpt])
 
   // ── Derived ───────────────────────────────────────────────────────────
-  const progress  = optState.phase === 'running' ? optState.percent : 0
-  const step      = optState.phase === 'running' ? optState.message : ''
-  const warnings  = optState.phase === 'done' ? optState.warnings : []
+  const progress = optState.phase === 'running' ? optState.percent : 0
+  const step = optState.phase === 'running' ? optState.message : ''
+  const warnings = optState.phase === 'done' ? optState.warnings : []
   const beforeSize = fmtSize(beforeMetrics?.fileSize ?? 0)
-  const afterSize  = fmtSize(afterMetrics?.fileSize ?? 0)
+  const afterSize = fmtSize(afterMetrics?.fileSize ?? 0)
   const savings = beforeMetrics && afterMetrics && afterMetrics.fileSize > 0
     ? Math.round((1 - afterMetrics.fileSize / beforeMetrics.fileSize) * 100)
     : null
@@ -294,7 +294,7 @@ export default function App() {
 
   return (
     <div className="ll-app">
-    <Analytics />
+      <Analytics />
       <CookieConsent onLearnMore={() => navigate('/faq')} />
       {/* ── HEADER ── */}
       <header className="ll-header">
@@ -334,6 +334,8 @@ export default function App() {
 
       {/* ── MAIN ── */}
       <main className="ll-main">
+
+        {route !== 'faq' && <h1 className="sr-only">{t('app.title')}</h1>}
 
         {route === 'faq' && <FaqPage onBack={() => navigate('/')} />}
 
