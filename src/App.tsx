@@ -12,6 +12,7 @@ import { OptimizeControls } from './components/OptimizeControls'
 import { ProfileSelector } from './components/ProfileSelector'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { FaqPage } from './components/FaqPage'
+import { CookieConsent } from './components/CookieConsent'
 import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
 import { Analytics } from '@vercel/analytics/react'
@@ -280,6 +281,7 @@ export default function App() {
   return (
     <div className="ll-app">
     <Analytics />
+      <CookieConsent onLearnMore={() => navigate('/faq')} />
       {/* ── HEADER ── */}
       <header className="ll-header">
         <div className="ll-header-left">

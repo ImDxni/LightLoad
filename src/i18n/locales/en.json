@@ -15,6 +15,14 @@
         "a": ["Absolutely not. LightLoad is a 100% client-side application. This means the entire optimization and compression process happens directly inside your browser (using your own device's power). No data, file, or geometry is ever sent to external servers. Your proprietary files stay yours, and your privacy is guaranteed."]
       },
       {
+        "q": "Do you use cookies or Google Analytics? Is any of my data tracked?",
+        "a": [
+          "We use Google Analytics (via Google Tag Manager) exclusively for aggregate, anonymized site metrics: how many people visit LightLoad and how many complete an optimization (a \"conversion\"). It's standard, privacy-respecting web analytics and has nothing to do with your 3D files.",
+          "Analytics cookies are only activated after you accept them in the cookie banner (Google Consent Mode v2 — denied by default). We don't use Google Ads or any ad-targeting cookies; ad_storage and ad_personalization always stay disabled.",
+          "No 3D model, texture or geometry data is ever collected, transmitted or linked to analytics. The optimization pipeline always runs 100% locally in your browser, whether or not you accept analytics cookies."
+        ]
+      },
+      {
         "q": "Which \"Optimization Profile\" should I choose?",
         "a": ["It depends on where you plan to publish your model:"],
         "list": [
@@ -155,5 +163,12 @@
     "select": "Language",
     "it": "Italiano",
     "en": "English"
+  },
+  "cookies": {
+    "title": "We value your privacy",
+    "desc": "We use Google Analytics only to measure site visits and conversions in aggregate. Your 3D files are never uploaded — everything is processed locally in your browser, whatever you choose here.",
+    "learnMore": "Learn more",
+    "accept": "Accept",
+    "decline": "Decline"
   }
 }

@@ -1,40 +1,47 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0b0e" />
 
-    <meta name="google-site-verification" content="irVB8mdrpNpyxqHvSabhtp6T69kz2U2K2eS0JV8TVLE" />
-    
-    <!-- Primary SEO -->
-    <title>LightLoad — Free GLB Optimizer | Compress 3D Models in the Browser</title>
-    <meta name="description" content="Free client-side GLB optimizer: compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, no servers — 100% private." />
-    <meta name="keywords" content="GLB optimizer, glTF compression, Draco, Meshopt, KTX2, Basis Universal, 3D model compression, mesh simplification, WebGL, Babylon.js" />
-    <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://www.lightload.it/" />
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0b0e" />
 
-    <!-- Open Graph -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="LightLoad" />
-    <meta property="og:title" content="LightLoad — Free GLB Optimizer" />
-    <meta property="og:description" content="Compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, 100% private." />
-    <meta property="og:url" content="https://www.lightload.it/" />
-    <meta property="og:image" content="https://www.lightload.it/preview.jpg" />
-    <meta property="og:locale" content="en_US" />
+  <meta name="google-site-verification" content="irVB8mdrpNpyxqHvSabhtp6T69kz2U2K2eS0JV8TVLE" />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="LightLoad — Free GLB Optimizer" />
-    <meta name="twitter:description" content="Compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, 100% private." />
-    <meta name="twitter:image" content="https://www.lightload.it/preview.jpg" />
+  <!-- Primary SEO -->
+  <title>LightLoad — Free GLB Optimizer | Compress 3D Models in the Browser</title>
+  <meta name="description"
+    content="Free client-side GLB optimizer: compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, no servers — 100% private." />
+  <meta name="keywords"
+    content="GLB optimizer, glTF compression, Draco, Meshopt, KTX2, Basis Universal, 3D model compression, mesh simplification, WebGL, Babylon.js" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://www.lightload.it/" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="LightLoad" />
+  <meta property="og:title" content="LightLoad — Free GLB Optimizer" />
+  <meta property="og:description"
+    content="Compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, 100% private." />
+  <meta property="og:url" content="https://www.lightload.it/" />
+  <meta property="og:image" content="https://www.lightload.it/preview.jpg" />
+  <meta property="og:locale" content="en_US" />
 
-    <script type="application/ld+json">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="LightLoad — Free GLB Optimizer" />
+  <meta name="twitter:description"
+    content="Compress 3D models with Draco/Meshopt geometry and KTX2 textures right in your browser. No upload, 100% private." />
+  <meta name="twitter:image" content="https://www.lightload.it/preview.jpg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
@@ -54,9 +61,31 @@
       ]
     }
     </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-PKKL3F3CQQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    // Set default consent state to denied for all categories 
+    gtag('consent', 'default', {
+      'ad_storage': 'denied',
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'analytics_storage': 'denied'
+    });
+
+    gtag('js', new Date());
+
+    gtag('config', 'G-PKKL3F3CQQ');
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

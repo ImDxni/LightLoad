@@ -132,6 +132,16 @@ All binaries are fetched/copied automatically by `npm run setup:wasm`. Manual fa
 
 ---
 
+## Analytics & Privacy
+
+LightLoad uses **Google Analytics (GA4)**, loaded via **Google Tag Manager**, exclusively to measure aggregate, anonymized site metrics: how many people land on the site and how many complete an optimization (a "conversion"). It has no connection whatsoever to the 3D file pipeline.
+
+- **Consent-based** — implemented with [Google Consent Mode v2](https://developers.google.com/tag-platform/security/guides/consent). Analytics storage defaults to `denied`; a cookie banner (bottom-left, dismissible) asks for consent before any analytics cookie is set.
+- **No ads** — `ad_storage`, `ad_user_data` and `ad_personalization` are always `denied`. We don't run Google Ads or any ad-retargeting.
+- **No file data, ever** — the optimization pipeline (geometry + texture compression) always runs 100% locally in the browser, regardless of the analytics choice. No `.glb`, texture, or geometry data is ever collected or transmitted, to Google or anyone else.
+
+---
+
 ## Technical decisions
 
 ### Why 100% client-side?

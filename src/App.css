@@ -1054,3 +1054,54 @@ input[type='range'] {
   border-color: rgba(124,92,255,0.55);
   color: #c9bcff;
 }
+
+/* ── Cookie consent banner ── */
+.ll-cookie {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 50;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: #101014;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: llCookieIn .3s ease;
+}
+@keyframes llCookieIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.ll-cookie-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ededf2;
+  margin-bottom: 6px;
+}
+.ll-cookie-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #9c9ca5;
+}
+.ll-cookie-link {
+  color: #a99cff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ll-cookie-link:hover { color: #c9bcff; }
+.ll-cookie-actions {
+  display: flex;
+  gap: 10px;
+}
+.ll-cookie-actions .ll-btn {
+  width: auto;
+  flex: 1;
+  height: 40px;
+  font-size: 13.5px;
+}
