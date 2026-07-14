@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { WebIO } from '@gltf-transform/core'
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions'
@@ -6,7 +6,6 @@ import type { ArcRotateCamera } from '@babylonjs/core'
 import { useOptimizer } from './hooks/useOptimizer'
 import { extractMetrics } from './lib/metricsExtractor'
 import type { OptimizationOptions, GLBMetrics } from './types/pipeline'
-import { ViewerPanel } from './components/ViewerPanel'
 import { MetricsTable } from './components/MetricsTable'
 import { VramBadge } from './components/VramBadge'
 import { OptimizeControls } from './components/OptimizeControls'
@@ -17,6 +16,9 @@ import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
 import { Analytics } from '@vercel/analytics/react'
 import './App.css'
+
+
+const ViewerPanel = lazy(() => import('./components/ViewerPanel').then(m => ({ default: m.ViewerPanel })))
 
 const DEFAULT_PROFILE: Profile = 'ecommerce'
 const DEFAULT_OPTIONS: OptimizationOptions = PROFILE_PRESETS.ecommerce
@@ -79,12 +81,17 @@ export default function App() {
   const [optimizedOptions, setOptimizedOptions] = useState<OptimizationOptions | null>(null)
   const pendingOptionsRef = useRef<OptimizationOptions | null>(null)
 
-  // Minimal hash routing: #faq → FAQ page, everything else → the tool
-  const [route, setRoute] = useState<'home' | 'faq'>(() => window.location.hash === '#faq' ? 'faq' : 'home')
+  const [route, setRoute] = useState<'home' | 'faq'>(() => window.location.pathname === '/faq' ? 'faq' : 'home')
+
+  const navigate = useCallback((path: '/' | '/faq') => {
+    if (window.location.pathname !== path) window.history.pushState(null, '', path)
+    setRoute(path === '/faq' ? 'faq' : 'home')
+  }, [])
+
   useEffect(() => {
-    const onHash = () => setRoute(window.location.hash === '#faq' ? 'faq' : 'home')
-    window.addEventListener('hashchange', onHash)
-    return () => window.removeEventListener('hashchange', onHash)
+    const onPopState = () => setRoute(window.location.pathname === '/faq' ? 'faq' : 'home')
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
   }, [])
 
   useEffect(() => {
@@ -94,11 +101,15 @@ export default function App() {
       .catch(() => {})
   }, [])
 
-  // Keep <title>, <html lang> and meta description in sync with the active language and page
+  // Keep <title>, <html lang>, meta description, canonical and og:url in sync with the active language and page
   useEffect(() => {
     document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language
     document.title = route === 'faq' ? `${t('faq.title')} — LightLoad` : t('app.title')
-    document.querySelector('meta[name="description"]')?.setAttribute('content', t('app.metaDescription'))
+    document.querySelector('meta[name="description"]')?.setAttribute('content', route === 'faq' ? t('faq.metaDescription') : t('app.metaDescription'))
+
+    const canonicalUrl = `https://www.lightload.it${route === 'faq' ? '/faq' : '/'}`
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
   }, [t, i18n.resolvedLanguage, i18n.language, route])
 
   const { state: optState, optimize, reset: resetOpt } = useOptimizer()
@@ -289,7 +300,13 @@ export default function App() {
         </div>
 
         <div className="ll-header-right">
-          <a href={route === 'faq' ? '#home' : '#faq'} className="ll-nav-link">{t('faq.nav')}</a>
+          <a
+            href={route === 'faq' ? '/' : '/faq'}
+            className="ll-nav-link"
+            onClick={(e) => { e.preventDefault(); navigate(route === 'faq' ? '/' : '/faq') }}
+          >
+            {t('faq.nav')}
+          </a>
           <LanguageSwitcher />
           <a href="https://github.com/ImDxni/lightload" target="_blank" rel="noopener noreferrer" className="ll-github">
             <span className="ll-github-stars">★ {stars ?? '—'}</span>
@@ -302,7 +319,7 @@ export default function App() {
       {/* ── MAIN ── */}
       <main className="ll-main">
 
-        {route === 'faq' && <FaqPage />}
+        {route === 'faq' && <FaqPage onBack={() => navigate('/')} />}
 
         {/* EMPTY */}
         {route !== 'faq' && view === 'empty' && (
@@ -376,7 +393,9 @@ export default function App() {
                     <div className="ll-viewer-canvas-wrap">
                       {!originalBuffer && <div className="ll-viewer-empty">{t('viewer.noModel')}</div>}
                       {originalBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
-                      <ViewerPanel buffer={originalBuffer} wireframe={wireframe} onCameraReady={handleBeforeCameraReady} />
+                      <Suspense fallback={<div className="ll-viewer-empty">{t('processing.title')}…</div>}>
+                        <ViewerPanel buffer={originalBuffer} wireframe={wireframe} onCameraReady={handleBeforeCameraReady} />
+                      </Suspense>
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size-group">
@@ -401,7 +420,9 @@ export default function App() {
                     <div className="ll-viewer-canvas-wrap">
                       {!optimizedBuffer && <div className="ll-viewer-empty">{t('viewer.toOptimize')}</div>}
                       {optimizedBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
-                      <ViewerPanel buffer={optimizedBuffer} wireframe={wireframe} onCameraReady={handleAfterCameraReady} />
+                      <Suspense fallback={<div className="ll-viewer-empty">{t('processing.title')}…</div>}>
+                        <ViewerPanel buffer={optimizedBuffer} wireframe={wireframe} onCameraReady={handleAfterCameraReady} />
+                      </Suspense>
                     </div>
                     <div className="ll-viewer-footer">
                       <span className="ll-viewer-size-group">

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 interface FaqDef { term: string; desc: string }
 interface FaqItem { q: string; a: string[]; list?: FaqDef[] }
 
-export function FaqPage() {
+export function FaqPage({ onBack }: { onBack: () => void }) {
   const { t } = useTranslation()
   const items = t('faq.items', { returnObjects: true }) as FaqItem[]
 
@@ -45,7 +45,7 @@ export function FaqPage() {
           ))}
         </div>
 
-        <a className="ll-faq-back" href="#home">← {t('faq.back')}</a>
+        <a className="ll-faq-back" href="/" onClick={(e) => { e.preventDefault(); onBack() }}>← {t('faq.back')}</a>
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />

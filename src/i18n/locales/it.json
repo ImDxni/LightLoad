@@ -7,6 +7,7 @@
   "faq": {
     "nav": "FAQ",
     "title": "Domande Frequenti",
+    "metaDescription": "Risposte su LightLoad, l'ottimizzatore GLB client-side: compressione Draco vs Meshopt, texture KTX2/Basis Universal, risparmio VRAM, profili di ottimizzazione e privacy.",
     "back": "Torna allo strumento",
     "items": [
       {
