@@ -15,6 +15,7 @@ import { FaqPage } from './components/FaqPage'
 import { CookieConsent } from './components/CookieConsent'
 import { PROFILE_PRESETS, type Profile } from './lib/profiles'
 import { fmtSize } from './lib/format'
+import { trackEvent } from './lib/analytics'
 import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 
@@ -171,6 +172,7 @@ export default function App() {
     resetOpt()
     setFilename(name)
     setOriginalBuffer(buffer)
+    trackEvent('glb_upload', { file_size_bytes: buffer.byteLength })
 
     try {
       const io = new WebIO().registerExtensions(ALL_EXTENSIONS)
@@ -236,8 +238,20 @@ export default function App() {
   }, [originalBuffer, options, optimize])
 
   useEffect(() => {
-    if (optState.phase === 'done') setOptimizedOptions(pendingOptionsRef.current)
-  }, [optState.phase])
+    if (optState.phase !== 'done' || !afterMetrics) return
+    setOptimizedOptions(pendingOptionsRef.current)
+
+    const opts = pendingOptionsRef.current
+    const sizeBefore = beforeMetrics?.fileSize
+    const sizeAfter = afterMetrics.fileSize
+    trackEvent('optimization_complete', {
+      geometry_codec: opts?.geometry.draco ? 'draco' : opts?.geometry.meshopt ? 'meshopt' : 'none',
+      texture_format: opts?.texture.enabled ? opts.texture.format : 'none',
+      size_before_bytes: sizeBefore,
+      size_after_bytes: sizeAfter,
+      savings_percent: sizeBefore ? Math.round((1 - sizeAfter / sizeBefore) * 100) : undefined,
+    })
+  }, [optState.phase, beforeMetrics, afterMetrics])
 
   // ── Download ─────────────────────────────────────────────────────────
   const handleDownload = useCallback(() => {

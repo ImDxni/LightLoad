@@ -1,18 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { updateAnalyticsConsent, type AnalyticsConsent } from '../lib/analytics'
 
-type Consent = 'granted' | 'denied'
 const STORAGE_KEY = 'll_cookie_consent'
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void
-  }
-}
-
-function applyConsent(consent: Consent) {
-  window.gtag?.('consent', 'update', { analytics_storage: consent })
-}
 
 export function CookieConsent({ onLearnMore }: { onLearnMore: () => void }) {
   const { t } = useTranslation()
@@ -23,13 +13,13 @@ export function CookieConsent({ onLearnMore }: { onLearnMore: () => void }) {
 
   // Re-apply the stored choice to Google Consent Mode on every load (gtag default is always 'denied')
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'granted' || stored === 'denied') applyConsent(stored)
+    const stored = localStorage.getItem(STORAGE_KEY) as AnalyticsConsent | null
+    if (stored === 'granted' || stored === 'denied') updateAnalyticsConsent(stored)
   }, [])
 
-  const choose = (consent: Consent) => {
+  const choose = (consent: AnalyticsConsent) => {
     localStorage.setItem(STORAGE_KEY, consent)
-    applyConsent(consent)
+    updateAnalyticsConsent(consent)
     setVisible(false)
   }
 
