@@ -5,6 +5,7 @@ import { extractMetrics } from '../lib/metricsExtractor'
 import { sanitizeGlbPadding } from '../lib/glbSanitizer'
 import { applyGeometryOps, loadDracoDecoder } from '../lib/geometryOps'
 import { encodeTextureToKTX2, loadKtxModule } from '../lib/ktx2Encoder'
+import { labelFromMaterialSlot } from '../lib/textureLabel'
 import { MeshoptDecoder } from 'meshoptimizer'
 import { t, setWorkerLang } from '../i18n/worker'
 
@@ -117,7 +118,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
     if (!size) continue
     const [width, height] = size
     if (width > 0 && height > 0 && (width % 4 !== 0 || height % 4 !== 0)) {
-      badTextures.push(tex.getName() || `texture_${textures.indexOf(tex)}`)
+      badTextures.push(tex.getName() || labelFromMaterialSlot(doc, tex) || `texture_${textures.indexOf(tex)}`)
     }
   }
   if (badTextures.length > 0) {
@@ -128,7 +129,7 @@ async function compressTextures(doc: Document, options: OptimizationOptions): Pr
 
   for (let i = 0; i < textures.length; i++) {
     const tex = textures[i]
-    const name = tex.getName() || `texture_${i}`
+    const name = tex.getName() || labelFromMaterialSlot(doc, tex) || `texture_${i}`
     progress(
       t('progress.texture', { i: i + 1, total: textures.length, name, format: options.texture.format.toUpperCase() }),
       60 + Math.round((30 * i) / textures.length),

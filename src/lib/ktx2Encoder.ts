@@ -7,7 +7,7 @@ import type {
   MipLevel,
 } from '../types/ktx2'
 
-import {enumNum} from './format'
+import { enumNum } from './format'
 
 let cachedModule: KtxModule | null = null
 
@@ -141,8 +141,8 @@ export async function encodeTextureToKTX2(
 
   // Enum fields (vkFormat) need the enum object, not an integer
   const ci = new ktx.textureCreateInfo() as KtxCreateInfoInstance
-  ci.glInternalformat = 0
-  ;(ci as Record<string, unknown>).vkFormat = vkFormatEnumObj
+  ci.glInternalformat = 0;
+  (ci as Record<string, unknown>).vkFormat = vkFormatEnumObj
   ci.baseWidth = padded.width
   ci.baseHeight = padded.height
   ci.baseDepth = 1

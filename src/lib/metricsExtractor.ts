@@ -1,6 +1,7 @@
 import type { Document } from '@gltf-transform/core'
 import type { GLBMetrics, TextureInfo } from '../types/pipeline'
 import { computeVramBreakdown } from './vram'
+import { labelFromMaterialSlot } from './textureLabel'
 
 /**
  * @param ktx2Format target KTX2 mode, used only to weigh compressed textures
@@ -63,7 +64,7 @@ export function extractMetrics(
     }
 
     return {
-      name: tex.getName() || '(unnamed)',
+      name: tex.getName() || labelFromMaterialSlot(doc, tex) || '(unnamed)',
       width,
       height,
       mimeType: tex.getMimeType(),
