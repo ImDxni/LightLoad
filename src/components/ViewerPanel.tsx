@@ -73,6 +73,14 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
     sceneRef.current = scene
     scene.clearColor = new Color4(0.071, 0.071, 0.086, 1) // #121216
 
+    //Active needDepthPrePass for all materials with alpha < 1, to avoid transparency issues
+    scene.meshes.forEach(mesh => {
+      const mat = mesh.material as any;
+      if (!mat) return;
+      const a = mat.alpha ?? mat._alpha ?? 1;
+      mat.needDepthPrePass = a < 1;
+    });
+
     const camera = new ArcRotateCamera('camera', Math.PI / 2, Math.PI / 3, 3.5, Vector3.Zero(), scene)
     camera.minZ = 0.01
     camera.inertia = 0.85
@@ -124,53 +132,53 @@ export function ViewerPanel({ buffer, wireframe = false, onCameraReady }: Viewer
 
     let cancelled = false
 
-    ;(async () => {
-      if (!buffer) { setLoading(false); return }
-      setLoading(true)
-      try {
-        const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
+      ; (async () => {
+        if (!buffer) { setLoading(false); return }
+        setLoading(true)
         try {
-          await AppendSceneAsync(file, scene)
-        } catch (e) {
-          if (!cancelled) console.error('[ViewerPanel] load failed:', e)
-          return
-        }
-
-        if (cancelled || scene.isDisposed) return
-
-        scene.animationGroups.forEach(ag => { ag.stop(); ag.reset() })
-
-        scene.meshes.forEach(m => m.computeWorldMatrix(true))
-        await new Promise<void>(r => requestAnimationFrame(() => r()))
-
-        if (cancelled || scene.isDisposed) return
-
-        scene.materials.forEach(m => { m.wireframe = wireframeRef.current })
-
-        try {
-          const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
-          if (visible.length > 0) {
-            let xMin = Infinity, yMin = Infinity, zMin = Infinity
-            let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity
-            for (const m of visible) {
-              const bi = m.getBoundingInfo()
-              const mn = bi.boundingBox.minimumWorld
-              const mx = bi.boundingBox.maximumWorld
-              if (mn.x < xMin) xMin = mn.x; if (mx.x > xMax) xMax = mx.x
-              if (mn.y < yMin) yMin = mn.y; if (mx.y > yMax) yMax = mx.y
-              if (mn.z < zMin) zMin = mn.z; if (mx.z > zMax) zMax = mx.z
-            }
-            const size = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2)
-            cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
-            cam.radius = Math.max(size, 0.01) * 1.2
+          const file = new File([buffer], 'model.glb', { type: 'model/gltf-binary' })
+          try {
+            await AppendSceneAsync(file, scene)
+          } catch (e) {
+            if (!cancelled) console.error('[ViewerPanel] load failed:', e)
+            return
           }
-        } catch { /* camera stays at its default position */ }
-        cam.alpha = Math.PI / 4
-        cam.beta = Math.PI / 3
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    })()
+
+          if (cancelled || scene.isDisposed) return
+
+          scene.animationGroups.forEach(ag => { ag.stop(); ag.reset() })
+
+          scene.meshes.forEach(m => m.computeWorldMatrix(true))
+          await new Promise<void>(r => requestAnimationFrame(() => r()))
+
+          if (cancelled || scene.isDisposed) return
+
+          scene.materials.forEach(m => { m.wireframe = wireframeRef.current })
+
+          try {
+            const visible = scene.meshes.filter(m => m.isVisible && m.isEnabled() && m.getTotalVertices() > 0)
+            if (visible.length > 0) {
+              let xMin = Infinity, yMin = Infinity, zMin = Infinity
+              let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity
+              for (const m of visible) {
+                const bi = m.getBoundingInfo()
+                const mn = bi.boundingBox.minimumWorld
+                const mx = bi.boundingBox.maximumWorld
+                if (mn.x < xMin) xMin = mn.x; if (mx.x > xMax) xMax = mx.x
+                if (mn.y < yMin) yMin = mn.y; if (mx.y > yMax) yMax = mx.y
+                if (mn.z < zMin) zMin = mn.z; if (mx.z > zMax) zMax = mx.z
+              }
+              const size = Math.sqrt((xMax - xMin) ** 2 + (yMax - yMin) ** 2 + (zMax - zMin) ** 2)
+              cam.target.set((xMin + xMax) / 2, (yMin + yMax) / 2, (zMin + zMax) / 2)
+              cam.radius = Math.max(size, 0.01) * 1.2
+            }
+          } catch { /* camera stays at its default position */ }
+          cam.alpha = Math.PI / 4
+          cam.beta = Math.PI / 3
+        } finally {
+          if (!cancelled) setLoading(false)
+        }
+      })()
 
     return () => { cancelled = true }
   }, [buffer])
