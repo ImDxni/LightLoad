@@ -411,7 +411,7 @@ export default function App() {
                     <div className="ll-viewer-canvas-wrap">
                       {!originalBuffer && <div className="ll-viewer-empty">{t('viewer.noModel')}</div>}
                       {originalBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
-                      <Suspense fallback={<div className="ll-viewer-empty">{t('processing.title')}…</div>}>
+                      <Suspense fallback={<div className="ll-viewer-empty">{t('viewer.loading')}</div>}>
                         <ViewerPanel buffer={originalBuffer} wireframe={wireframe} onCameraReady={handleBeforeCameraReady} />
                       </Suspense>
                     </div>
@@ -438,7 +438,7 @@ export default function App() {
                     <div className="ll-viewer-canvas-wrap">
                       {!optimizedBuffer && <div className="ll-viewer-empty">{t('viewer.toOptimize')}</div>}
                       {optimizedBuffer && <WireframeToggle active={wireframe} onToggle={() => setWireframe(w => !w)} />}
-                      <Suspense fallback={<div className="ll-viewer-empty">{t('processing.title')}…</div>}>
+                      <Suspense fallback={<div className="ll-viewer-empty"></div>}>
                         <ViewerPanel buffer={optimizedBuffer} wireframe={wireframe} onCameraReady={handleAfterCameraReady} />
                       </Suspense>
                     </div>

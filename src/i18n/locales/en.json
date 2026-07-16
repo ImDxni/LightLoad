@@ -65,6 +65,7 @@
     "title": "Optimizing"
   },
   "viewer": {
+    "loading": "Loading…",
     "original": "Original",
     "optimized": "Optimized",
     "originalDesc": "high-poly · raw",
